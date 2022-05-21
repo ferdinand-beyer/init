@@ -1,6 +1,6 @@
 {:paths ["src" "resources"]
- :deps {init/init-core {:local/root "../../modules/init-core"}
-        init/init-discovery-classpath {:local/root "../../modules/init-discovery-classpath"}
+ :deps {init/init-core      {:local/root "../../modules/init-core"}
+        init/init-classpath {:local/root "../../modules/init-classpath"}
 
         aero/aero {:mvn/version "1.1.6"}
         http-kit/http-kit {:mvn/version "2.5.3"}

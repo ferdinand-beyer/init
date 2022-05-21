@@ -1,9 +1,11 @@
 {:deps
- {modules/init-core                {:local/root "modules/init-core"}
-  modules/init-discovery-classpath {:local/root "modules/init-discovery-classpath"}}
+ {modules/init-core      {:local/root "modules/init-core"}
+  modules/init-classpath {:local/root "modules/init-classpath"}}
 
  :aliases
- {:dev {:extra-paths ["dev"]}
+ {:dev {:extra-paths ["dev"]
+        :extra-deps {examples/todo-app {:local/root "examples/todo-app"}
+                     org.clojure/tools.namespace {:mvn/version "1.3.0"}}}
 
   :test {:extra-paths ["modules/init-core/test"
                        "modules/init-discovery-classpath/test"]
