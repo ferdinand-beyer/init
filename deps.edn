@@ -1,0 +1,18 @@
+{:deps
+ {modules/init-core                {:local/root "modules/init-core"}
+  modules/init-discovery-classpath {:local/root "modules/init-discovery-classpath"}}
+
+ :aliases
+ {:dev {:extra-paths ["dev"]}
+
+  :test {:extra-paths ["modules/init-core/test"
+                       "modules/init-discovery-classpath/test"]
+         :extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.861"}
+                      lambdaisland/kaocha-cloverage {:mvn/version "1.0.75"}}}
+
+  :test/run {:main-opts ["-m" "kaocha.runner"]}
+
+  :test/watch {:main-opts ["-m" "kaocha.runner" "--watch"]}
+
+  :build {:deps {io.github.seancorfield/build-clj {:git/tag "v0.6.7" :git/sha "22c2d09"}}
+          :ns-default build}}}
