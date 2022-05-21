@@ -1,5 +1,6 @@
 (ns init.discovery
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [init.registry :as registry]))
 
 ;; TODO: Internal -- move to 'impl' namespace?
 (defn ns-prefix-pred
@@ -20,6 +21,8 @@
       (keyword (-> m :ns ns-name name) (-> m :name name))
       n)))
 
+;; TODO: Create a light-weight type that determines the init function from the var?
+;; We will potentially have a large number of components that will be pruned.
 (defn- component [var init-fn]
   (let [m (meta var)]
     {:var var
@@ -55,21 +58,27 @@
   (when-let [arglists (-> var meta :arglists)]
     (not-every? seq arglists)))
 
-;; TODO: Validate: Does not exist yet (:init/name)
-(defn- register-component [registry component]
-  (assoc registry (:name component) component))
+;; TODO: Allow custom injection/initialisation:
+;; - partial: Deps are first args, component is a function that takes the
+;;   remaining args
+;; - merge: Merges deps into first arg
+;; (Could be a multimethod dispatching on a metadata key :init/inject)
+(defn- init-fn [_ f]
+  ;; Need to return a function [deps] => instance, since we use map components
+  ;; that take an unbound function (swallow 'this')
+  (partial apply f))
 
 ;; TODO Validate: Deps count match arity
 (defn- register-fn [registry var f]
   (if (or (tagged? var)
           (and (nullary? var) (not (private? var))))
-    (register-component registry (component var (partial apply f)))
+    (registry/add-component registry (component var (init-fn var f)))
     registry))
 
 ;; TODO Validate: No deps!
 (defn- register-val [registry var val]
   (if (or (tagged? var) (not (private? var)))
-    (register-component registry (component var (constantly val)))
+    (registry/add-component registry (component var (constantly val)))
     registry))
 
 (defn- register-var [registry _ var]
@@ -80,7 +89,23 @@
       (fn? value) (register-fn registry var value)
       :else (register-val registry var value))))
 
-(defn find-components
+(defn ns-components
   "Searches a namespace for components."
-  [ns]
-  (reduce-kv register-var {} (ns-interns ns)))
+  ([ns]
+   (ns-components (registry/registry) ns))
+  ([registry ns]
+   (reduce-kv register-var registry (ns-interns ns))))
+
+(defn find-namespaces
+  "Searches all loaded namespaces that start with the given prefix."
+  [prefix]
+  (filter (comp (ns-prefix-pred prefix) ns-name) (all-ns)))
+
+(defn find-components
+  "Searches loaded namespaces for components."
+  ([]
+   (find-components (all-ns)))
+  ([namespaces]
+   (find-components (registry/registry) namespaces))
+  ([registry namespaces]
+   (reduce ns-components registry namespaces)))

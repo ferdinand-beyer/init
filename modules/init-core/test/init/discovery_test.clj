@@ -24,10 +24,10 @@
     (is (not (pred 'init)))
     (is (not (pred 'init.discovery-test-sibling)))))
 
-(deftest find-components-test
+(deftest ns-components-test
   (testing "finds nothing in empty namespace"
-    (with-test-ns 'init.test.empty []
-      (is (= {} (discovery/find-components (find-ns 'init.test.empty))))))
+    (with-test-ns 'test.empty []
+      (is (= {} (discovery/ns-components 'test.empty)))))
 
   (testing "finds non-function vars"
     (with-test-ns 'test.const '[[simple nil :simple-value]
@@ -35,7 +35,7 @@
                                 [private {:private true} :private]
                                 [private-tagged {:private true :init/name true} :private-tagged]
                                 [extra {:init/tags [:test/extra]} :extra]]
-      (let [components (discovery/find-components 'test.const)
+      (let [components (discovery/ns-components 'test.const)
             simple     (:test.const/simple components)]
         (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
                (-> components keys set)))
@@ -45,19 +45,19 @@
         (is (= :simple-value (component/init simple nil)))
         (is (= [:test/extra] (-> components :test.const/extra component/tags))))))
 
-  (testing "finds nullary function vars"
-    (with-test-ns 'test.nullary [['simple '{:arglists ([])} (fn [] :simple-value)]
-                                 ['takes-args '{:arglists ([foo bar])} (fn [_ _])]
-                                 ['implicit {:init/name :test/named} (fn [])]
-                                 ['private {:private true} (fn [])]
-                                 ['private-tagged {:private true :init/name true} (fn [])]
-                                 ['extra {:init/tags [:test/extra]} (fn [])]]
-      (let [components (discovery/find-components 'test.nullary)
-            simple     (:test.nullary/simple components)]
-        (is (= #{:test.nullary/simple :test/named :test.nullary/private-tagged :test.nullary/extra}
+  (testing "finds function vars"
+    (with-test-ns 'test.fn [['simple '{:arglists ([])} (fn [] :simple-value)]
+                            ['takes-args '{:arglists ([foo bar])} (fn [_ _])]
+                            ['implicit {:init/name :test/named} (fn [])]
+                            ['private {:private true} (fn [])]
+                            ['private-tagged {:private true :init/name true} (fn [])]
+                            ['extra {:init/tags [:test/extra]} (fn [])]]
+      (let [components (discovery/ns-components 'test.fn)
+            simple     (:test.fn/simple components)]
+        (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
                (-> components keys set)))
-        (is (= :test.nullary/simple (component/component-name simple)))
+        (is (= :test.fn/simple (component/component-name simple)))
         (is (empty? (component/tags simple)))
         (is (empty? (component/deps simple)))
         (is (= :simple-value (component/init simple nil)))
-        (is (= [:test/extra] (-> components :test.nullary/extra component/tags)))))))
+        (is (= [:test/extra] (-> components :test.fn/extra component/tags)))))))

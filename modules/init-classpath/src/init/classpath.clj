@@ -15,3 +15,7 @@
                       (filter (discovery/ns-prefix-pred prefix)))]
     (run! require ns-names)
     (map find-ns ns-names)))
+
+(defn load-components
+  [ns-prefix]
+  (discovery/find-components (load-namespaces ns-prefix)))
