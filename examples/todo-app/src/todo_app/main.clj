@@ -1,10 +1,11 @@
 (ns todo-app.main
   (:gen-class)
-  (:require [init.core :as init]
+  (:require [clojure.pprint :refer [pprint]]
             [init.classpath :refer [load-components]]))
 
 (defn -main []
-  (load-components 'todo-app))
+  (let [registry (load-components 'todo-app)]
+    (pprint registry)))
 
 (comment
   (-main)
