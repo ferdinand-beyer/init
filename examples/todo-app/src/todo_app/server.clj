@@ -6,5 +6,5 @@
   [port])
 
 (defn stop-server
-  {:init/halts #'start-server}
+  #_{:init/halts #'start-server}
   [server])
