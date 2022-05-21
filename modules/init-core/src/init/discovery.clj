@@ -76,7 +76,7 @@
 ;; TODO Validate: No deps!
 (defn- val->init [var]
   (when (or (tagged? var) (not (private? var)))
-    (partial var-get var)))
+    (fn [_] (var-get var))))
 
 (defn- var->component [var]
   (when-let [init-fn (if (-> var meta :arglists)
@@ -94,7 +94,8 @@
 ;; TODO: Validate: Check for unary?
 (defn- register-halt-fn [registry var ref]
   (let [component (resolve-component registry ref)]
-    (assoc-in registry [(:name component) :halt] (var-get var))))
+    ;; TODO: Could var-get to 'pin' to the state and safe one indirection
+    (assoc-in registry [(:name component) :halt] var)))
 
 ;; TODO: Validate: No init-tags (not (tagged? var))
 (defn- register-hook [registry var]

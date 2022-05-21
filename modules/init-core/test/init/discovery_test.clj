@@ -40,10 +40,10 @@
         (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
                (-> components keys set)))
         (is (= :test.const/simple (component/component-name simple)))
-        (is (empty? (component/tags simple)))
         (is (empty? (component/deps simple)))
         (is (= :simple-value (component/init simple nil)))
-        (is (= [:test/extra] (-> components :test.const/extra component/tags))))))
+        (is (empty? (-> components :test.const/private-tagged component/tags)))
+        (is (= #{:test/extra} (-> components :test.const/extra component/tags))))))
 
   (testing "finds function vars"
     (with-test-ns 'test.fn [['simple '{:arglists ([])} (fn [] :simple-value)]
@@ -57,7 +57,9 @@
         (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
                (-> components keys set)))
         (is (= :test.fn/simple (component/component-name simple)))
-        (is (empty? (component/tags simple)))
         (is (empty? (component/deps simple)))
         (is (= :simple-value (component/init simple nil)))
-        (is (= [:test/extra] (-> components :test.fn/extra component/tags)))))))
+        (is (empty? (-> components :test.fn/private-tagged component/tags)))
+        (is (= #{:test/extra} (-> components :test.fn/extra component/tags)))))))
+
+;; TODO: Test hooks
