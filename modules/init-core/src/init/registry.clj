@@ -21,3 +21,6 @@
     (when (and (not allow-replace?) (get registry n))
       (throw (duplicate-name-exception n)))
     (assoc registry n component)))
+
+(defn find-component [registry name]
+  (get registry name))

@@ -6,6 +6,10 @@
   (deps [this] "Returns this component's dependencies.")
   (init [this deps] "Returns an instance of the component given resolved dependencies."))
 
+;; TODO: Halt lookup order:
+;; - Defined on component
+;; - Defined on instance (e.g. Closeable)
+
 (extend-protocol Component
   clojure.lang.IPersistentMap
   (component-name [m] (:name m))
