@@ -242,7 +242,12 @@ uberjar tooling.
   etc. (do we need `registry`?)
 * `init.provider` - create providers, supporting proxies/wrappers
 * `init.inject` - injection points
-* `init.vars` - create configuration from vars in a namespace
-* `init.discovery` - find namespaces
+* `init.vars` - create configuration from vars & metadata in a namespace
+* `init.spec` - specs describing metadata
+* `init.discovery` - find and load namespaces containing component definitions
 * `init.system` - start/stop systems from a configuration
+* `init.generate` - code generation for component wiring
 * `init.core` - convenience entry points, typical users only need this
+
+Optional features will have dependencies on `spec`, `java.classpath` and
+`tools.namespace`.
