@@ -2,6 +2,9 @@
   (:require [clojure.string :as str]
             [init.registry :as registry]))
 
+;; TODO: Split into 'init.vars' (var -> component) and namespace discovery
+;; TODO: Work with 'config', not 'registry'
+
 ;; TODO: Internal -- move to 'impl' namespace?
 (defn ns-prefix-pred
   "Returns a predicate that matches namespace names (ie. symbols) by prefix."
@@ -90,7 +93,7 @@
     (registry/add-component registry component)
     registry))
 
-;; TODO: Registry function to update components?
+;; TODO: Registry function to replace components? Decorate?
 ;; TODO: Validate: Check for unary?
 (defn- register-halt-fn [registry var ref]
   (let [component (resolve-component registry ref)]
