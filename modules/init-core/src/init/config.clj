@@ -28,6 +28,8 @@
       (throw (duplicate-name-exception n)))
     (assoc config n component)))
 
+;; TODO: Call this "select" and return a map which itself is a config?
+;; Than we could select further, similar to CDI's "Instance".
 (defn find-components-by-tag
   "Searches `config` for all components providing `tag`.  `tag` may be a
    keyword or a collection of keywords."
@@ -75,3 +77,4 @@
 ;; Get a stable topological order
 
 ;; Support filtering components, e.g. for conditionals
+;; (easy, because configs are just maps)

@@ -11,6 +11,10 @@
   ;; TODO: "provides"?
   (tags [this] "Returns additional tags this component provides.")
   (deps [this] "Returns this component's dependencies.")
+
+  ;; TODO: Move this into its own protocol?
+  ;; TODO: For config, deps will be resolved components.
+  ;; TODO: For systems, deps will be (lazy?) instances.
   (init [this deps] "Returns an instance of the component given resolved dependencies."))
 
 (extend-protocol Component
