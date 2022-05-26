@@ -7,6 +7,11 @@
   (-dep-tag [this] "Returns the tag the required component needs to provide.")
   (-dep-unique? [this] "Returns true if a unique match is required."))
 
+(extend-protocol Dependency
+  clojure.lang.Keyword
+  (-dep-tag [kw] kw)
+  (-dep-unique? [_] true))
+
 (defprotocol Component
   (-comp-key [this] "Returns the component key, a qualified keyword.")
   (-comp-provides [this] "Returns additional tags this component provides.")
@@ -80,6 +85,9 @@
             :config config
             :tag tag}))
 
+;; TODO: Support an ambuiguity resolution function
+;; Delegate validation so that we can get rid of the Dependency protocol
+;; altogether.
 (defn- resolve-dependency [config dep]
   (let [tag   (-dep-tag dep)
         found (select config tag)]
@@ -89,6 +97,7 @@
       (next found) (throw (ambiguous-tag-exception config tag (keys found)))
       :else found)))
 
+;; TODO: Catch exceptions and wrap them so that we get the component as context
 (defn resolve-deps
   "Resolves dependencies of `component` in `config`.  Returns a sequence of
    sequences: For every dependency, a sequence of map entries with resolved
@@ -143,8 +152,9 @@
          (set/union keyset)
          (sort (key-comparator graph)))))
 
-(defn- dependency-order [config tags]
+(defn dependency-order [config tags]
   (expand-tags config tags dep/transitive-dependencies-set))
 
-(defn- reverse-dependency-order [config tags]
+(defn reverse-dependency-order [config tags]
   (reverse (expand-tags config tags dep/transitive-dependents-set)))
+
