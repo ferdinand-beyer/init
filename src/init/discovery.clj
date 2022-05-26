@@ -27,6 +27,9 @@
    ;; TODO: Check for duplicates in merge
    (reduce #(merge %1 (meta/find-components %2)) config namespaces)))
 
+;; Classpath scanning
+;; XXX: Move to init.discovery.scan?
+
 (defn classpath-namespaces
   "Returns a sequence of symbols of all namespaces on the classpath.
    Requires `org.clojure/java.classpath` and `org.clojure/tools.namespace`
