@@ -1,5 +1,6 @@
 (ns init.config
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [init.component :as component]
             [weavejester.dependency :as dep]))
 
@@ -86,7 +87,7 @@
       ex)))
 
 (defn dependency-graph
-  "Builds a dependency graph on the component names in `config`."
+  "Builds a dependency graph on the keys in `config`."
   [config]
   (try
     (reduce-kv (fn [g n c]
@@ -98,3 +99,30 @@
                config)
     (catch Exception ex
       (throw (translate-exception config ex)))))
+
+(defn- key-comparator [graph]
+  (dep/topo-comparator #(compare (str %1) (str %2)) graph))
+
+(defn- keyset
+  "Finds all keys that provide given tags."
+  [config tags]
+  (into #{}
+        (comp (mapcat #(select config %))
+              (map key))
+        tags))
+
+(defn- expand-tags
+  "Returns keys in dependency order for all components providing `tags`
+   and their transitive dependencies."
+  [config tags transitive-fn]
+  (let [graph  (dependency-graph config)
+        keyset (keyset config tags)]
+    (->> (transitive-fn graph keyset)
+         (set/union keyset)
+         (sort (key-comparator graph)))))
+
+(defn- dependency-order [config tags]
+  (expand-tags config tags dep/transitive-dependencies-set))
+
+(defn- reverse-dependency-order [config tags]
+  (reverse (expand-tags config tags dep/transitive-dependents-set)))

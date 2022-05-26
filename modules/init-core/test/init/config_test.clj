@@ -134,3 +134,21 @@
       (is (true? (dep/depends? graph ::blacksmith ::well)))
       (is (false? (dep/depends? graph ::lumberjack ::farm))))))
 
+(deftest dependency-order-test
+  (let [config (make-config)]
+    (is (= [::forester ::lumberjack]
+           (#'config/dependency-order config [::wood])))
+    (is (= [::farm ::mill ::well ::bakery ::iron-mine]
+           (#'config/dependency-order config [::iron])))
+    (is (= [::farm ::mill ::well ::bakery ::forester ::iron-mine ::lumberjack ::kiln ::blacksmith]
+           (#'config/dependency-order config (keys config))))))
+
+(deftest reverse-dependency-order-test
+  (let [config (make-config)]
+    (is (= [::blacksmith ::kiln ::lumberjack]
+           (#'config/reverse-dependency-order config [::wood])))
+    (is (= [::blacksmith ::iron-mine]
+           (#'config/reverse-dependency-order config [::iron])))
+    (is (= [::blacksmith ::kiln ::lumberjack ::iron-mine ::forester ::bakery ::well ::mill ::farm]
+           (#'config/reverse-dependency-order config (keys config))))))
+

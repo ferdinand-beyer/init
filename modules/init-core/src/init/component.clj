@@ -7,6 +7,7 @@
   (unique? [this] "Returns true if a unique match is required."))
 
 (defprotocol Component
+  ;; TODO: "key"?
   (component-name [this] "Returns the component name, a qualified keyword.")
   ;; TODO: "provides"?
   (tags [this] "Returns additional tags this component provides.")
