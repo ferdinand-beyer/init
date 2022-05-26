@@ -1,27 +1,26 @@
 (ns init.config-test
   (:require [clojure.test :refer [deftest is testing]]
-            [init.component :as component]
             [init.config :as config]
             [weavejester.dependency :as dep]))
 
 (defn- dep
   ([tag] (dep tag true))
   ([tag unique?]
-   (reify component/Dependency
-     (tag [_] tag)
-     (unique? [_] unique?))))
+   (reify config/Dependency
+     (-dep-tag [_] tag)
+     (-dep-unique? [_] unique?))))
 
 (defn- ->dep [x]
-  (if (satisfies? component/Dependency x) x (dep x)))
+  (if (satisfies? config/Dependency x) x (dep x)))
 
 (defn- component
-  ([name] (component name nil))
-  ([name provides] (component name provides nil))
-  ([name provides requires]
-   (reify component/Component
-     (component-name [_] name)
-     (tags [_] provides)
-     (deps [_] (map ->dep requires)))))
+  ([key] (component key nil))
+  ([key provides] (component key provides nil))
+  ([key provides requires]
+   (reify config/Component
+     (-comp-key [_] key)
+     (-comp-provides [_] provides)
+     (-comp-deps [_] (map ->dep requires)))))
 
 (def settlers-components
   [[::bakery [::bread] [::flour ::water]]
@@ -41,8 +40,8 @@
 (defn- make-config
   ([] (make-config settlers-components))
   ([comps]
-   (reduce (fn [config [name provides requires]]
-             (config/add-component config (component name provides requires)))
+   (reduce (fn [config [key provides requires]]
+             (config/add-component config (component key provides requires)))
            {}
            comps)))
 
@@ -55,24 +54,19 @@
      (catch Exception e#
        e#)))
 
-(deftest find-component-test
-  (is (nil? (config/find-component {} ::foo)))
-  (let [comp (component ::foo)]
-    (is (= comp (config/find-component {::foo comp} ::foo)))))
-
 (deftest add-component-test
   (let [comp (component ::foo)]
     (is (= comp (-> {}
                     (config/add-component comp)
-                    (config/find-component ::foo)))))
+                    (get ::foo)))))
 
-  (testing "duplicate component name"
+  (testing "duplicate component key"
     (let [ex (-> {}
                  (config/add-component (component ::foo))
                  (config/add-component (component ::foo))
                  thrown)]
       (is (re-find #"(?i)duplicate" (ex-message ex)))
-      (is (= ::config/duplicate-name (-> ex ex-data :reason)))))
+      (is (= ::config/duplicate-key (-> ex ex-data :reason)))))
 
   (testing "replacing components"
     (let [old    (component ::foo)
@@ -80,13 +74,13 @@
           config (-> {}
                      (config/add-component old)
                      (config/add-component new :replace? true))]
-      (is (= new (config/find-component config ::foo))))))
+      (is (= new (::foo config))))))
 
 (deftest select-test
   (is (nil? (config/select {} ::foo)))
 
   (let [config (make-config)]
-    (testing "select components by name"
+    (testing "select components by key"
       (is (= (select-keys config [::bakery])
              (into {} (config/select config ::bakery)))))
 

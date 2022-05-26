@@ -1,46 +1,68 @@
 (ns init.config
   (:require [clojure.set :as set]
             [clojure.string :as str]
-            [init.component :as component]
             [weavejester.dependency :as dep]))
 
-(defn find-component
-  "Searches `config` for a component by name."
-  [config name]
-  (get config name))
+(defprotocol Dependency
+  (-dep-tag [this] "Returns the tag the required component needs to provide.")
+  (-dep-unique? [this] "Returns true if a unique match is required."))
 
-(defn- invalid-name-exception [n]
-  (ex-info (str "Invalid component name: " n ". Must be a qualified keyword.")
-           {:reason ::invalid-name, :name n}))
+(defprotocol Component
+  (-comp-key [this] "Returns the component key, a qualified keyword.")
+  (-comp-provides [this] "Returns additional tags this component provides.")
+  (-comp-deps [this] "Returns this component's dependencies."))
 
-(defn- duplicate-name-exception [n]
-  (ex-info (str "Duplicate component name: " n)
-           {:reason ::duplicate-name, :name n}))
+(defn valid-key?
+  "Returns true if `k` is a valid component key."
+  [k]
+  (qualified-keyword? k))
+
+(defn- provided-tags [component]
+  (into #{(-comp-key component)} (-comp-provides component)))
+
+(defn provides?
+  "Returns true if `component` provides `tag`.  `tag` may be a keyword, or a
+   collection of keywords, in which case `provides?` checks every tag."
+  [component tag]
+  (let [provided (provided-tags component)
+        derived? (fn [t] (some #(isa? % t) provided))]
+    (if (coll? tag)
+      (every? derived? tag)
+      (derived? tag))))
+
+(defn- invalid-key-exception [k]
+  (ex-info (str "Invalid component key: " k ". Must be a qualified keyword.")
+           {:reason ::invalid-key, :key k}))
+
+(defn- duplicate-key-exception [k]
+  (ex-info (str "Duplicate component key: " k)
+           {:reason ::duplicate-key, :key k}))
 
 (defn add-component
   "Adds a component to the configuration."
   [config component & {:keys [replace?]}]
-  (let [n (component/component-name component)]
+  {:pre [(satisfies? Component component)]}
+  (let [k (-comp-key component)]
     ;; TODO: Move this somewhere else (into-component?)
-    (when-not (component/valid-name? n)
-      (throw (invalid-name-exception n)))
-    (when (and (not replace?) (get config n))
-      (throw (duplicate-name-exception n)))
-    (assoc config n component)))
+    (when-not (valid-key? k)
+      (throw (invalid-key-exception k)))
+    (when (and (not replace?) (contains? config k))
+      (throw (duplicate-key-exception k)))
+    (assoc config k component)))
 
 (defn select
   "Searches `config` for all components providing `tag`.  `tag` may be a
    keyword or a collection of keywords."
   [config tag]
-  (->> config (filter #(component/provides? (val %) tag)) seq))
+  (->> config (filter #(provides? (val %) tag)) seq))
 
-(defn- ambiguous-tag-exception [config tag matching-names]
+(defn- ambiguous-tag-exception [config tag matching-keys]
   (ex-info (str "Ambiguous tag: " tag ". Found multiple candidates: "
-                (str/join ", " matching-names))
+                (str/join ", " matching-keys))
            {:reason ::ambiguous-tag
             :config config
             :tag tag
-            :matching-names matching-names}))
+            :matching-keys matching-keys}))
 
 (defn find-unique
   "Returns the component in `config` that provides `tag`.  If there are no
@@ -59,10 +81,10 @@
             :tag tag}))
 
 (defn- resolve-dependency [config dep]
-  (let [tag   (component/tag dep)
+  (let [tag   (-dep-tag dep)
         found (select config tag)]
     (cond
-      (not (component/unique? dep)) found
+      (not (-dep-unique? dep)) found
       (empty? found) (throw (unsatisfied-dependency-exception config tag))
       (next found) (throw (ambiguous-tag-exception config tag (keys found)))
       :else found)))
@@ -72,13 +94,13 @@
    sequences: For every dependency, a sequence of map entries with resolved
    components."
   [config component]
-  (map #(resolve-dependency config %) (component/deps component)))
+  (map #(resolve-dependency config %) (-comp-deps component)))
 
-(defn- circular-dependency-exception [config name1 name2]
-  (ex-info (str "Circular dependency between components " name1 " and " name2)
+(defn- circular-dependency-exception [config key1 key2]
+  (ex-info (str "Circular dependency between components " key1 " and " key2)
            {:reason ::circular-dependency
             :config config
-            :names #{name1 name2}}))
+            :keys #{key1 key2}}))
 
 (defn- translate-exception [config ex]
   (let [ex-data (ex-data ex)]
