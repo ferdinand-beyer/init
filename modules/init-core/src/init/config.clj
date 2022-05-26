@@ -1,8 +1,7 @@
 (ns init.config
   (:require [clojure.string :as str]
-            [init.component :as component]))
-
-(def empty-config {})
+            [init.component :as component]
+            [weavejester.dependency :as dep]))
 
 (defn find-component
   "Searches `config` for a component by name."
@@ -11,11 +10,11 @@
 
 (defn- invalid-name-exception [n]
   (ex-info (str "Invalid component name: " n ". Must be a qualified keyword.")
-           {:error ::invalid-name, :name n}))
+           {:reason ::invalid-name, :name n}))
 
 (defn- duplicate-name-exception [n]
   (ex-info (str "Duplicate component name: " n)
-           {:error ::duplicate-name, :name n}))
+           {:reason ::duplicate-name, :name n}))
 
 (defn add-component
   "Adds a component to the configuration."
@@ -28,18 +27,16 @@
       (throw (duplicate-name-exception n)))
     (assoc config n component)))
 
-;; TODO: Call this "select" and return a map which itself is a config?
-;; Than we could select further, similar to CDI's "Instance".
-(defn find-components-by-tag
+(defn select
   "Searches `config` for all components providing `tag`.  `tag` may be a
    keyword or a collection of keywords."
   [config tag]
-  (->> config vals (filter #(component/provides? % tag)) seq))
+  (->> config (filter #(component/provides? (val %) tag)) seq))
 
 (defn- ambiguous-tag-exception [config tag matching-names]
   (ex-info (str "Ambiguous tag: " tag ". Found multiple candidates: "
                 (str/join ", " matching-names))
-           {:error ::ambiguous-tag
+           {:reason ::ambiguous-tag
             :config config
             :tag tag
             :matching-names matching-names}))
@@ -49,32 +46,55 @@
    matching components, returns `nil`.  If more than one component provides
    `tag`, throws an ambiguous tag exception."
   [config tag]
-  (let [comps (find-components-by-tag config tag)]
-    (when (next comps)
-      (throw (ambiguous-tag-exception config tag (map component/component-name comps))))
-    (first comps)))
+  (when-let [found (select config tag)]
+    (when (next found)
+      (throw (ambiguous-tag-exception config tag (keys found))))
+    (-> found first val)))
 
-(defn- ambiguous? [config tag]
-  (next (find-components-by-tag config tag)))
+(defn- unsatisfied-dependency-exception [config tag]
+  (ex-info (str "Unsatisfied dependency: No component found providing " tag)
+           {:reason ::unsatisfied-dependency
+            :config config
+            :tag tag}))
 
-(defn- unique-deps [config]
-  (->> (vals config)
-       (mapcat component/deps)
-       (filter component/unique?)))
+(defn- resolve-dependency [config dep]
+  (let [tag   (component/tag dep)
+        found (select config tag)]
+    (cond
+      (not (component/unique? dep)) found
+      (empty? found) (throw (unsatisfied-dependency-exception config tag))
+      (next found) (throw (ambiguous-tag-exception config tag (keys found)))
+      :else found)))
 
-(defn- ambiguous-deps [config]
-  (->> (unique-deps config)
-       (filter #(ambiguous? config (component/tag %)))))
+(defn resolve-deps
+  "Resolves dependencies of `component` in `config`.  Returns a sequence of
+   sequences: For every dependency, a sequence of map entries with resolved
+   components."
+  [config component]
+  (map #(resolve-dependency config %) (component/deps component)))
 
-;; Validate:
-;; - For each component
-;;   For each dep
-;;   If unique: require exactly one match (else: unsatisfied / ambiguous dep)
+(defn- circular-dependency-exception [config name1 name2]
+  (ex-info (str "Circular dependency between components " name1 " and " name2)
+           {:reason ::circular-dependency
+            :config config
+            :names #{name1 name2}}))
 
-;; Build a dependency graph
-;; Get a subset of the config: Components matching required keys, plus their
-;; transitive dependencies
-;; Get a stable topological order
+(defn- translate-exception [config ex]
+  (let [ex-data (ex-data ex)]
+    (if (= ::dep/circular-dependency (:reason ex-data))
+      (circular-dependency-exception config (:node ex-data) (:dependency ex-data))
+      ex)))
 
-;; Support filtering components, e.g. for conditionals
-;; (easy, because configs are just maps)
+(defn dependency-graph
+  "Builds a dependency graph on the component names in `config`."
+  [config]
+  (try
+    (reduce-kv (fn [g n c]
+                 (transduce (comp cat (map key))
+                            (completing #(dep/depend %1 n %2))
+                            g
+                            (resolve-deps config c)))
+               (dep/graph)
+               config)
+    (catch Exception ex
+      (throw (translate-exception config ex)))))

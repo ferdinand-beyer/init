@@ -6,11 +6,11 @@
 
 (defn- invalid-name-exception [n]
   (ex-info (str "Invalid component name: " n ". Must be a qualified keyword.")
-           {:error ::invalid-name, :name n}))
+           {:reason ::invalid-name, :name n}))
 
 (defn- duplicate-name-exception [n]
   (ex-info (str "Duplicate component name: " n)
-           {:error ::duplicate-name, :name n}))
+           {:reason ::duplicate-name, :name n}))
 
 (defn add-component
   "Adds a component to the registry."

@@ -50,7 +50,7 @@
 
 (defn- invalid-ref-exception [name]
   (ex-info (str "Referenced component " name " not found")
-           {:error ::invalid-ref, :name name}))
+           {:reason ::invalid-ref, :name name}))
 
 (defn- find-component [registry name]
   (or (registry/find-component registry name)
