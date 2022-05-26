@@ -1,14 +1,15 @@
-{:deps
- {modules/init-core      {:local/root "modules/init-core"}
-  modules/init-classpath {:local/root "modules/init-classpath"}}
+{:paths ["src"]
+ :deps {weavejester/dependency {:mvn/version "0.2.1"}}
 
  :aliases
- {:dev {:extra-paths ["dev"]
+ {:provided {:extra-deps {org.clojure/java.classpath {:mvn/version "1.0.0"}
+                          org.clojure/tools.namespace {:mvn/version "1.3.0"}}}
+
+  :dev {:extra-paths ["dev"]
         :extra-deps {examples/todo-app {:local/root "examples/todo-app"}
                      org.clojure/tools.namespace {:mvn/version "1.3.0"}}}
 
-  :test {:extra-paths ["modules/init-core/test"
-                       "modules/init-discovery-classpath/test"]
+  :test {:extra-paths ["test"]
          :extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.861"}
                       lambdaisland/kaocha-cloverage {:mvn/version "1.0.75"}}}
 

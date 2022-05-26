@@ -1,4 +1,0 @@
-{:paths ["src"]
- :deps {com.fbeyer/init-core {:local/root "../init-core"}
-        org.clojure/java.classpath {:mvn/version "1.0.0"}
-        org.clojure/tools.namespace {:mvn/version "1.3.0"}}}

@@ -1,2 +1,0 @@
-{:paths ["src"]
- :deps {weavejester/dependency {:mvn/version "0.2.1"}}}
