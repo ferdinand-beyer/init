@@ -7,44 +7,35 @@
 Metadata describing a named object that is a building block of the software
 system.
 
+### Configuration
+
+A collection of unique components.
+
 ### Tag
 
 Identifies components.  Every component has a name, which is a tag, and can
 have additional tags.  Tags can have is-a relationships, so that they form
 graphs.
 
+### Selector
+
+Criteria to select components in a configuration.  A selector consists of one
+or more tags.  A components matches a selector if it provides all tags in the
+selector.
+
+### Dependency Graph
+
+A data structure derived from a configuration, by resolving component
+dependencies.
+
 ### (Component) Instance
 
-Concrete object.
-
-### Provider
-
-A function returning component instances.
-
-### Binding
-
-An alias for a component, describes which concrete component shall be injected
-when an abstract tag is requested.  This is a kind of provider: Provides the
-abstraction by returning the concrete instance.
-
-### Injection Point
-
-Describes references to components to be injected into another component, and
-the the shape of the injected value.
-
-### Module
-
-Group of providers and bindings.
-
-### Configuration
-
-Set of components, providers, and modules describing a dependency graph.
-
-Also known as _registry_.
+A concrete instance of a component; the result of initialising the component.
 
 ### System
 
-Instance of a configuration.
+A map of component instances, obtained from the configuration with the help of
+a dependency graph.
 
 ## Programmatic configuration
 
@@ -63,35 +54,39 @@ Vars can be interpreted as components and providers.
 * Public vars without `:arglists` metadata, i.e. values
 * Public vars with `:arglists` metadata that contains `[]`, i.e. nullary
   functions
-* Vars tagged with `:init/component`, including private vars and functions
+* Vars tagged with `:init/name`, including private vars and functions
   taking arguments (injection points)
+
+TODO: Functions taking arguments need `:init/inject`
+TODO: Discovery (only tagged) vs. supported when added explicitly (e.g. referenced)
 
 #### Name
 
 The default component name is the qualified var name, coerced into a keyword.
 
-The name can be specified explicitly using the `:init/component` metadata,
+The name can be specified explicitly using the `:init/name` metadata,
 and must be a qualified keyword.
 
 #### Tags
 
-Additional tags can be specified with the `:init/tags` metadata, which must be
+Additional tags can be specified with the `:init/provides` metadata, which must be
 a sequence of qualified keywords.
-
-TODO: Should this be `:init/provides`?
 
 #### Injection Points
 
 Only for function-valued vars.
 
-Specified with the `:init/inject` metadata key or its specialisations
-(`:init/inject-partial`, `:init/inject-into`).
+Specified with the `:init/inject` metadata key.
 
 When specified in the var metadata, must be a vector corresponding to the
 function arguments.  When specified on the argument symbols, must be a single
 injection point description (see below).
 
+TODO: Does argument metadata annotation make sense?
+
 #### Provider
+
+TODO: Name? Is that really a provider?
 
 Derived from the var's value.  Functions are provider functions taking
 arguments as described by the injection points and returning the component
@@ -101,7 +96,7 @@ Non-function values are considered as singleton instances, and a provider
 function taking no arguments and returning this singleton is generated
 automatically.
 
-##### Wrapping / proxies / partial application
+##### Advanced injection
 
 As a convenience, allows injecting into runtime arguments.
 
@@ -112,26 +107,20 @@ As a convenience, allows injecting into runtime arguments.
 
 ```clojure
 (defn ring-handler
-  {:init/inject [:app/db]
-   :init/into :first}
+  {:init/inject [:into-first :app/db]}
   [request])
 
 (defn http-request
-  {:init/inject [:http/client]
-   :init/into :last}
+  {:init/inject [:into-last :http/client]}
   [url opts])
 ```
-
-TODO: Exact declaration: Better to use `:init/inject-into`, or per argument /
-injection point? E.g. `:merge` assumes a map and merges the dependencies into
-this argument, `:bind` inject as this argument, removing it at runtime (partial).
 
 #### Instance lifecycle handlers
 
 * `:init/halt-fn` can be a function taking the component instance and perform
   clean-up.
 
-Handlers can:
+Handlers can be:
 * Functions, e.g. declared inline or by resolving to a var in the same namespace
 * Symbols, resolving to function-valued vars
 * Vars containing functions implementing the handler (preferred)
@@ -152,66 +141,35 @@ the var as a halt handler for the referenced component:
 
 ### Bindings
 
-Metadata on a _module var_.
+TODO
 
-### Modules
+Metadata on components:
 
-A var tagged with `:init/module`.  The value must be a map describing the module.
-
-The module is named after the var, but this name can be overwritten with the value
-of the `:init/module` tag, similar to components.
-
-* `:binds` is a map of target tags to source tags, stating that the source
-  should be provided when the target is requested.
-
-TODO: Easier to treat modules as components, and allowing any component to provide
-bindings?  Having two maps for modules (metadata and value) seems inconsistent.
-Does it make sense for the module itself to have instances?
+```clojure
+(defm my-module
+  {:init/bind {:some/tag :resolve/this}}
+  [])
+```
 
 ### Injection Points
 
-Properties:
-* Tag(s) to find matching component(s)
-* Cardinality: Zero (optional), One (unique, default), Many ()
+Defined within `:init/inject`
 
-Shape:
-* Map: Canonical
-* Qualified keyword: unique tag
-* Vector: Multiple tags
-* Set: Injects a set of many deps `#{:app/handler}`
+Unique values:
+* `:some/tag`
+* `[:some/tag :another/tag]`
+* `[:unique :some/tag :another/tag]`
 
-Map:
-* `:tags` one or more tags
-* `:as` - cardinality (max) / ordinality (min)
-  * `:optional`: zero or more; value or `nil`
-  * `:unique`: exactly one
-  * `:set`: set of zero or more
-  * `:seq`: some possibly lazy sequence
-  * `:map`: Every matching component keyed by name
-* `:defer?` - Lazy, can be dereferenced with `@`/`deref`
+Sets:
+* `#{:some/tag}`
+* `#{:some/tag :another/tag}`
+* `[:set :some/tag :another/tag]`
 
-Multiple: Map containing:
-* `:keys` - injects a map, recurses into keys
-  * Vector: Each element is an injection point
-  * Map: Keys are target keys, values are injection points (rename)
-
-```clojure
-{:keys {:db {:tags [:db/postgres :app/db]
-        :handlers #{:app/handler}}}}
-```
-
-Short forms:
-* Keyword: `{:tags [%] :as :unique}`
-* Vector: `{:tags % :as unique}`
-* Set: `{:tags (vec %) :as :set}`
-
-Maybe: Vector with unqualified keyword:
-
-```clojure
-[:optional :app/db]
-[:all :app/db]
-[:keys {:db :app/db}]
-```
+Maps:
+* `[:map :some/tag]`
+* `{:some/tag :some/tag}`
+* `{:some/tag #{:supports/nesting}}`
+* `{:key {:can :be/renamed}}`
 
 ## Discovery
 
@@ -221,6 +179,13 @@ need to be loaded, e.g. using `require`.
 ### Loading namespaces
 
 Namespaces can be loaded manually, or automatically by examining the classpath.
+
+### Config expansion
+
+Start with some components and bindings, automatically `require` and `resolve`
+required components.
+
+Especially useful for binding configurations.
 
 #### Classpath scanning
 
@@ -234,20 +199,3 @@ Similar to `java.util.ServiceLoader`, searches the classpath for special files
 Compatible to `ServiceLoader`, so that the files can be merged properly when
 generating uberjars by appending them.  This should be done automatically by
 uberjar tooling.
-
-## APIs
-
-* `init.component` - components
-* `init.config` - work with configurations: Add components, bindings, hooks,
-  etc. (do we need `registry`?)
-* `init.provider` - create providers, supporting proxies/wrappers
-* `init.inject` - injection points
-* `init.vars` - create configuration from vars & metadata in a namespace
-* `init.spec` - specs describing metadata
-* `init.discovery` - find and load namespaces containing component definitions
-* `init.system` - start/stop systems from a configuration
-* `init.generate` - code generation for component wiring
-* `init.core` - convenience entry points, typical users only need this
-
-Optional features will have dependencies on `spec`, `java.classpath` and
-`tools.namespace`.

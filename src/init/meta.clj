@@ -63,6 +63,7 @@
   [c writer]
   (.write writer (str "#component[" (-var c) "]")))
 
+;; TODO: Support :init/halt-fn in addition to :init/halts?
 (defn- var-component [var]
   (let [producer (when (fn-var? var)
                    (inject/injector (-> var meta :init/inject) var))]
