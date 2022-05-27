@@ -3,14 +3,22 @@
             [clojure.string :as str]
             [weavejester.dependency :as dep]))
 
-(defprotocol Dependency
-  (-dep-tag [this] "Returns the tag the required component needs to provide.")
-  (-dep-unique? [this] "Returns true if a unique match is required."))
+(defprotocol Selector
+  "Matches components by tags."
+  (-tags [this]))
 
-(extend-protocol Dependency
+(extend-protocol Selector
+  clojure.lang.IPersistentVector
+  (-tags [v] v)
+
   clojure.lang.Keyword
-  (-dep-tag [kw] kw)
-  (-dep-unique? [_] true))
+  (-tags [k] [k])
+
+  clojure.lang.Sequential
+  (-tags [s] (vec s))
+
+  clojure.lang.IPersistentSet
+  (-tags [s] (vec s)))
 
 (defprotocol Component
   (-comp-key [this] "Returns the component key, a qualified keyword.")
@@ -26,14 +34,12 @@
   (into #{(-comp-key component)} (-comp-provides component)))
 
 (defn provides?
-  "Returns true if `component` provides `tag`.  `tag` may be a keyword, or a
-   collection of keywords, in which case `provides?` checks every tag."
-  [component tag]
-  (let [provided (provided-tags component)
-        derived? (fn [t] (some #(isa? % t) provided))]
-    (if (coll? tag)
-      (every? derived? tag)
-      (derived? tag))))
+  "Returns true if `component` provides `selector`."
+  [component selector]
+  (let [provided (provided-tags component)]
+    (every? (fn [t]
+              (some #(isa? % t) provided))
+            (-tags selector))))
 
 (defn- invalid-key-exception [k]
   (ex-info (str "Invalid component key: " k ". Must be a qualified keyword.")
@@ -56,54 +62,49 @@
     (assoc config k component)))
 
 (defn select
-  "Searches `config` for all components providing `tag`.  `tag` may be a
-   keyword or a collection of keywords."
-  [config tag]
-  (->> config (filter #(provides? (val %) tag)) seq))
+  "Returns a sequence of map entries from `config` with all components
+   providing `selector`."
+  [config selector]
+  (->> config (filter #(provides? (val %) selector)) seq))
 
-(defn- ambiguous-tag-exception [config tag matching-keys]
-  (ex-info (str "Ambiguous tag: " tag ". Found multiple candidates: "
-                (str/join ", " matching-keys))
-           {:reason ::ambiguous-tag
-            :config config
-            :tag tag
+(defn- unsatisfied-dependency-exception [config component selector]
+  (ex-info (str "Unsatisfied dependency: No component found providing " selector
+                " required by " (-comp-key component))
+           {:reason    ::unsatisfied-dependency
+            :config    config
+            :component component
+            :selector  selector}))
+
+(defn- ambiguous-dependency-exception [config component selector matching-keys]
+  (ex-info (str "Ambiguous dependency: " selector " for " (-comp-key component)
+                ". Found multiple candidates: " (str/join ", " matching-keys))
+           {:reason        ::ambiguous-tag
+            :config        config
+            :component     component
+            :selector      selector
             :matching-keys matching-keys}))
 
-(defn find-unique
-  "Returns the component in `config` that provides `tag`.  If there are no
-   matching components, returns `nil`.  If more than one component provides
-   `tag`, throws an ambiguous tag exception."
-  [config tag]
-  (when-let [found (select config tag)]
-    (when (next found)
-      (throw (ambiguous-tag-exception config tag (keys found))))
-    (-> found first val)))
+(defn resolve-dependency
+  "Default dependency resolution function.  Resolves to any keys matching `selector`."
+  [config _ selector]
+  (keys (select config selector)))
 
-(defn- unsatisfied-dependency-exception [config tag]
-  (ex-info (str "Unsatisfied dependency: No component found providing " tag)
-           {:reason ::unsatisfied-dependency
-            :config config
-            :tag tag}))
-
-;; TODO: Support an ambuiguity resolution function
-;; Delegate validation so that we can get rid of the Dependency protocol
-;; altogether.
-(defn- resolve-dependency [config dep]
-  (let [tag   (-dep-tag dep)
-        found (select config tag)]
+(defn resolve-unique
+  "Alternative dependency resolution function.  Requires a unique key matching `selector`."
+  [config component selector]
+  (let [keys (resolve-dependency config component selector)]
     (cond
-      (not (-dep-unique? dep)) found
-      (empty? found) (throw (unsatisfied-dependency-exception config tag))
-      (next found) (throw (ambiguous-tag-exception config tag (keys found)))
-      :else found)))
+      (empty? keys) (throw (unsatisfied-dependency-exception config component selector))
+      (next keys)   (throw (ambiguous-dependency-exception config component selector keys))
+      :else keys)))
 
-;; TODO: Catch exceptions and wrap them so that we get the component as context
 (defn resolve-deps
   "Resolves dependencies of `component` in `config`.  Returns a sequence of
-   sequences: For every dependency, a sequence of map entries with resolved
-   components."
-  [config component]
-  (map #(resolve-dependency config %) (-comp-deps component)))
+   sequences: For every dependency, a sequence of matching keys."
+  ([config component]
+   (resolve-deps config component resolve-dependency))
+  ([config component resolve-fn]
+   (map (partial resolve-fn config component) (-comp-deps component))))
 
 (defn- circular-dependency-exception [config key1 key2]
   (ex-info (str "Circular dependency between components " key1 " and " key2)
@@ -119,42 +120,50 @@
 
 (defn dependency-graph
   "Builds a dependency graph on the keys in `config`."
-  [config]
-  (try
-    (reduce-kv (fn [g n c]
-                 (transduce (comp cat (map key))
-                            (completing #(dep/depend %1 n %2))
-                            g
-                            (resolve-deps config c)))
-               (dep/graph)
-               config)
-    (catch Exception ex
-      (throw (translate-exception config ex)))))
+  ([config]
+   (dependency-graph config resolve-dependency))
+  ([config resolve-fn]
+   (try
+     (reduce-kv (fn [g n c]
+                  (transduce cat
+                             (completing #(dep/depend %1 n %2))
+                             g
+                             (resolve-deps config c resolve-fn)))
+                (dep/graph)
+                config)
+     (catch Exception ex
+       (throw (translate-exception config ex))))))
 
 (defn- key-comparator [graph]
   (dep/topo-comparator #(compare (str %1) (str %2)) graph))
 
 (defn- keyset
-  "Finds all keys that provide given tags."
-  [config tags]
+  "Finds all keys that provide at least one of the `selectors`."
+  [config selectors]
   (into #{}
         (comp (mapcat #(select config %))
               (map key))
-        tags))
+        selectors))
 
 (defn- expand-tags
-  "Returns keys in dependency order for all components providing `tags`
-   and their transitive dependencies."
-  [config tags transitive-fn]
+  "Returns keys in dependency order for all components providing `selectors`,
+   plus their transitive dependencies."
+  [config selectors transitive-fn]
   (let [graph  (dependency-graph config)
-        keyset (keyset config tags)]
+        keyset (keyset config selectors)]
     (->> (transitive-fn graph keyset)
          (set/union keyset)
          (sort (key-comparator graph)))))
 
-(defn dependency-order [config tags]
-  (expand-tags config tags dep/transitive-dependencies-set))
+;; TODO: Define those on the dependency graph?  When we keep the dependency
+;; graph around, we can easily query resolved dependencies, and use this as
+;; a starting point for validation (unsatisfied / ambiguous). Maybe keep the
+;; config as metadata.
+;; Config -> DependencyGraph -> System
 
-(defn reverse-dependency-order [config tags]
-  (reverse (expand-tags config tags dep/transitive-dependents-set)))
+(defn dependency-order [config selectors]
+  (expand-tags config selectors dep/transitive-dependencies-set))
+
+(defn reverse-dependency-order [config selectors]
+  (reverse (expand-tags config selectors dep/transitive-dependents-set)))
 

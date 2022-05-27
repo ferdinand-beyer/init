@@ -3,16 +3,6 @@
             [init.config :as config]
             [weavejester.dependency :as dep]))
 
-(defn- dep
-  ([tag] (dep tag true))
-  ([tag unique?]
-   (reify config/Dependency
-     (-dep-tag [_] tag)
-     (-dep-unique? [_] unique?))))
-
-(defn- ->dep [x]
-  (if (satisfies? config/Dependency x) x (dep x)))
-
 (defn- component
   ([key] (component key nil))
   ([key provides] (component key provides nil))
@@ -20,7 +10,7 @@
    (reify config/Component
      (-comp-key [_] key)
      (-comp-provides [_] provides)
-     (-comp-deps [_] (map ->dep requires)))))
+     (-comp-deps [_] requires))))
 
 (def settlers-components
   [[::bakery [::bread] [::flour ::water]]
@@ -91,27 +81,7 @@
       (is (= (select-keys config [::bakery ::fishery])
              (into {} (config/select config ::food)))))))
 
-(deftest find-unique-test
-  (let [config (make-config (conj settlers-components [::fishery [::fish]]))]
-    (is (= (::forester config) (config/find-unique config ::tree)))
-    (is (nil? (config/find-unique config ::silver)))
-    (let [ex (thrown (config/find-unique config ::food))]
-      (is (re-find #"(?i)ambiguous" (ex-message ex)))
-      (is (= ::config/ambiguous-tag (-> ex ex-data :reason))))))
-
 (deftest dependency-graph-test
-  (testing "detects unsatisfied dependencies"
-    (let [config (dissoc (make-config) ::well)
-          ex     (thrown (config/dependency-graph config))]
-      (is (re-find #"(?i)unsatisfied" (ex-message ex)))
-      (is (= ::config/unsatisfied-dependency (-> ex ex-data :reason)))))
-
-  (testing "detects ambiguous dependencies"
-    (let [config (make-config (conj settlers-components [::fishery [::fish]]))
-          ex     (thrown (config/dependency-graph config))]
-      (is (re-find #"(?i)ambiguous" (ex-message ex)))
-      (is (= ::config/ambiguous-tag (-> ex ex-data :reason)))))
-
   (testing "detects circular dependencies"
     (let [config (make-config [[::rock [] [::scissors]]
                                [::paper [] [::rock]]
@@ -127,6 +97,19 @@
              (set (dep/nodes graph))))
       (is (true? (dep/depends? graph ::blacksmith ::well)))
       (is (false? (dep/depends? graph ::lumberjack ::farm))))))
+
+(deftest resolve-unique-test
+  (testing "detects unsatisfied dependencies"
+    (let [config (dissoc (make-config) ::well)
+          ex     (thrown (config/dependency-graph config config/resolve-unique))]
+      (is (re-find #"(?i)unsatisfied" (ex-message ex)))
+      (is (= ::config/unsatisfied-dependency (-> ex ex-data :reason)))))
+
+  (testing "detects ambiguous dependencies"
+    (let [config (make-config (conj settlers-components [::fishery [::fish]]))
+          ex     (thrown (config/dependency-graph config config/resolve-unique))]
+      (is (re-find #"(?i)ambiguous" (ex-message ex)))
+      (is (= ::config/ambiguous-tag (-> ex ex-data :reason))))))
 
 (deftest dependency-order-test
   (let [config (make-config)]

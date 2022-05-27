@@ -2,15 +2,20 @@
   (:require [init.config :as config]
             [init.lifecycle :as lifecycle]))
 
+;; TODO: Integrate injections
+(defn- unique-dep? [_]
+  true)
+
 (defn- prepare-deps
   [config component system]
   (mapv (fn [d r]
-          (if (config/-dep-unique? d)
-            (-> r first key system)
-            (into #{} (map (comp system key)) r)))
+          (if (unique-dep? d)
+            (-> r first system)
+            (into #{} (map system) r)))
         (config/-comp-deps component)
         (config/resolve-deps config component)))
 
+;; Should we keep a map of providers instead of singletons?
 (defn- init-component
   [system config k component]
   {:pre [(satisfies? lifecycle/Init component)]}
@@ -18,14 +23,18 @@
         instance (lifecycle/-init component deps)]
     (assoc system k instance)))
 
+;; We could keep an atom of the current system and support a special
+;; component protocol for system-aware components.  Those could receive
+;; the atom and can therefore dereference the system at any time, allowing
+;; runtime inspection.
 (defn init
   "Initializes a system from a config map."
   ([config]
    (init config (keys config)))
-  ([config tags]
+  ([config selectors]
    (reduce #(init-component %1 config %2 (config %2))
            (with-meta {} {::config config})
-           (config/dependency-order config tags))))
+           (config/dependency-order config selectors))))
 
 (defn- config [system]
   (-> system meta ::config))
@@ -39,9 +48,9 @@
   "Halts a system map."
   ([system]
    (halt! system (keys system)))
-  ([system tags]
+  ([system selectors]
    (let [config (config system)]
-     (doseq [k (config/reverse-dependency-order config tags)]
+     (doseq [k (config/reverse-dependency-order config selectors)]
        (halt-component! system config k (config k) (system k))))))
 
 (comment
@@ -49,6 +58,7 @@
 
   (-> (init.discovery/load-components 'todo-app)
       (init [:http/server])
+      (doto (prn))
       (halt!))
 
   )
