@@ -17,6 +17,8 @@
 (defmacro with-test-ns [name defs & body]
   `(with-test-ns-fn ~name ~defs (fn [] ~@body)))
 
+;; TODO: Fix tests -- they assume non-tagged vars to be added automatically.
+
 (deftest find-components-test
   (testing "finds nothing in empty namespace"
     (with-test-ns 'test.empty []
@@ -56,9 +58,11 @@
         (is (= #{:test/extra} (-> config :test.fn/extra config/-provides))))))
 
   (testing "finds halt hooks"
-    (with-test-ns 'test.hooks [['start '{:arglists ([])} (fn [] :started)]
+    (with-test-ns 'test.hooks [['start '{:init/name true} (fn [] :started)]
                                ['stop '{:arglists ([x])
                                         :init/halts test.hooks/start} (fn [_] :stopped)]]
       (let [config (meta/find-components 'test.hooks)]
         (is (= [:test.hooks/start] (keys config)))
         (is (= :stopped (lifecycle/-halt (:test.hooks/start config) nil)))))))
+
+;; TODO: Test :init/inject

@@ -82,12 +82,14 @@
   (assert (every? qualified-keyword? body))
   (set-arg body))
 
+;; TODO: Use :keys?
 (defmethod -parse-arg-clause :map
   [_ body]
   (assert (seq body))
   (assert (every? qualified-keyword? body))
   (map-arg (zipmap body (map unique-arg body))))
 
+;; TODO: Better name?
 (defprotocol IntoArg
   (-parse-arg [arg] "Parse an argument injection"))
 
@@ -117,6 +119,8 @@
 
 ;;;; Injectors
 
+;; TODO: Name anonymous function for better error diagnostics (e.g. on ArityException)
+
 (defn- args-injector [inject-fn f producer]
   (reify
     Producer
@@ -138,7 +142,7 @@
 (defn- partial-injector [f producers]
   (composite-producer #(apply partial f %) producers))
 
-;; TODO: Assert maps
+;; TODO: Assert merge argument is actually a map (better error message)
 
 (defn- into-first-injector [f producer]
   (args-injector
@@ -165,7 +169,7 @@
   (if (and (= 1 (count body))
            (map? (first body)))
     (-parse-arg (first body))
-    (-parse-arg (into [:map] body))))
+    (-parse-arg (into [:map] body)))) ;; TODO: Extract a function for this, don't depend on the :map spec
 
 (defmethod -parse-inject-clause :into-first
   [_ body f]
@@ -175,10 +179,11 @@
   [_ body f]
   (into-last-injector f (parse-map body)))
 
-;; TODO: Allow single value, e.g. `:init/inject ::something`
+;; TODO: Allow scalar value, e.g. `:init/inject ::something`
 (defn injector
   "Returns an injector for the injection `spec` and a wrapped function `f`."
   [spec f]
+  {:pre [(ifn? f)]} ; can be a var
   (if (or (nil? spec) (true? spec) (empty? spec))
     (nullary-injector f)
     (let [[k & body] spec]

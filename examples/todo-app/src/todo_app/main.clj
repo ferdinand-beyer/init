@@ -10,9 +10,10 @@
   [config]
   (:port config))
 
+;; TODO: Provide a nice API in init.core, including support for shutdown hooks (duct.core-style)
 (defn -main []
   (let [config (load-components 'todo-app)
-        _ (pprint config)
+        _      (pprint config)
         system (system/init config)]
     (pprint system)
     (system/halt! system)))

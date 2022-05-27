@@ -64,6 +64,7 @@
   (.write writer (str "#component[" (-var c) "]")))
 
 ;; TODO: Support :init/halt-fn in addition to :init/halts?
+;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn- var-component [var]
   (let [producer (when (fn-var? var)
                    (inject/injector (-> var meta :init/inject) var))]
@@ -118,8 +119,7 @@
 (defn- hook? [var]
   (some #{:init/halts} (-> var meta keys)))
 
-;; halts: disposes? stops? closes?
-
+;; TODO: Move to discovery (namespace scanning)
 ;; TODO: Take options to e.g. only consider explicitly tagged vars?
 (defn find-components
   "Returns a config with all components from `ns`."
