@@ -2,18 +2,10 @@
   (:require [init.config :as config]
             [init.lifecycle :as lifecycle]))
 
-;; TODO: Integrate injections
-(defn- unique-dep? [_]
-  true)
-
 (defn- prepare-deps
   [config component system]
-  (mapv (fn [d r]
-          (if (unique-dep? d)
-            (-> r first system)
-            (into #{} (map system) r)))
-        (config/-requires component)
-        (config/resolve-deps config component)))
+  (map (partial map system)
+       (config/resolve-deps config component)))
 
 ;; Should we keep a map of providers instead of singletons?
 (defn- init-component

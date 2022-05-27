@@ -9,14 +9,15 @@
   "Extenders must also extend config/Selector."
   (-unique? [this] "Returns true if exactly one value is required."))
 
-;; Shared for args and the component instance producer.  To produce an instance,
-;; we first need to bring all args into the required shape, then call or wrap
-;; the producer function.
+;; TODO: Double-check if that is the right name. Producer? Injector?
 (defprotocol Producer
   (-deps [this] "Returns the sequence of dependencies")
   (-produce [this resolved] "Builds a value from resolved dependencies."))
 
-(defn- produce [producer resolved]
+(defn requires [producer]
+  (-deps producer))
+
+(defn produce [producer resolved]
   {:pre [(= (count resolved) (count (-deps producer)))]}
   (-produce producer resolved))
 
@@ -174,6 +175,7 @@
   [_ body f]
   (into-last-injector f (parse-map body)))
 
+;; TODO: Allow single value, e.g. `:init/inject ::something`
 (defn injector
   "Returns an injector for the injection `spec` and a wrapped function `f`."
   [spec f]

@@ -1,6 +1,7 @@
 (ns init.meta
   (:require [init.config :as config]
-            [init.lifecycle :as lifecycle]))
+            [init.lifecycle :as lifecycle]
+            [init.inject :as inject]))
 
 ;; TODO: Define more functions based on metadata instead of the var?
 
@@ -8,7 +9,7 @@
   (-> var meta :private))
 
 (defn- tagged? [var]
-  (->> var meta keys (some #{:init/name :init/tags :init/deps})))
+  (->> var meta keys (some #{:init/name :init/provides :init/inject})))
 
 (defn- fn-var? [var]
   (-> var meta :arglists))
@@ -25,60 +26,57 @@
       (keyword (-> m :ns ns-name name) (-> m :name name))
       k)))
 
+;; TODO: Support scalar :init/provides
 ;; Tagging as ::untagged allows us to remove implicit/automatic components
 (defn- var-provides [var]
-  (into #{} cat [(-> var meta :init/tags)
-                 (when-not (tagged? var) [::untagged])]))
-
-;; TODO: Support different inject patterns
-(defn- var-deps [var]
-  (-> var meta :init/deps))
-
-;; TODO Validate: Deps count match arity
-;; TODO: Allow custom injection/initialisation:
-;; - partial: Deps are first args, component is a function that takes the
-;;   remaining args
-;; - merge: Merges deps into first arg
-;; (Could be a multimethod dispatching on a metadata key :init/inject)
-(defn- var-init [var deps]
-  (if (fn-var? var)
-    (apply var deps)
-    (var-get var)))
+  (into #{} cat [(-> var meta :init/provides)
+                 (when-not (tagged? var)
+                   [::untagged])]))
 
 (defprotocol IVarComponent
   (-var [this])
   (-with-halt [this halt-var]))
 
-(deftype VarComponent [var halt-var]
+;; TODO: VarComponent isa inject/Producer?
+(deftype VarComponent [var ?producer ?halt-var]
   IVarComponent
   (-var [_] var)
-  (-with-halt [_ h] (VarComponent. var h))
+  (-with-halt [_ h] (VarComponent. var ?producer h))
 
   config/Component
   (-name [_] (component-name var))
   (-provides [_] (var-provides var))
-  (-requires [_] (var-deps var))
+  (-requires [_] (some-> ?producer inject/requires))
 
   lifecycle/Init
-  (-init [_ deps] (var-init var deps))
+  (-init [_ deps]
+    (if ?producer
+      (inject/produce ?producer deps)
+      (var-get var)))
 
   lifecycle/Halt
-  (-halt [_ instance] (when halt-var (halt-var instance))))
+  (-halt [_ instance]
+    (when ?halt-var
+      (?halt-var instance))))
 
 (defmethod print-method VarComponent
   [c writer]
   (.write writer (str "#component[" (-var c) "]")))
 
 (defn- var-component [var]
-  (when (or (tagged? var)
-            (and (not (private? var))
-                 (or (not (fn-var? var))
-                     (nullary? var))))
-    (VarComponent. var nil)))
+  (let [producer (when (fn-var? var)
+                   (inject/injector (-> var meta :init/inject) var))]
+    (VarComponent. var producer nil)))
+
+;; TODO: Better story on how to add non-tagged vars
+(defn implicit? [var]
+  (and (not (private? var))
+       (or (not (fn-var? var))
+           (nullary? var))))
 
 (defn- register-component [config var]
-  (if-let [component (var-component var)]
-    (config/add-component config component)
+  (if (tagged? var)
+    (config/add-component config (var-component var))
     config))
 
 (defn- invalid-ref-exception [name]

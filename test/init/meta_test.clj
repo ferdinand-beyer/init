@@ -27,7 +27,7 @@
                                 [implicit {:init/name :test/named} :named]
                                 [private {:private true} :private]
                                 [private-tagged {:private true :init/name true} :private-tagged]
-                                [extra {:init/tags [:test/extra]} :extra]]
+                                [extra {:init/provides [:test/extra]} :extra]]
       (let [config (meta/find-components 'test.const)
             simple (:test.const/simple config)]
         (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
@@ -44,7 +44,7 @@
                             ['implicit {:init/name :test/named} (fn [])]
                             ['private {:private true} (fn [])]
                             ['private-tagged {:private true :init/name true} (fn [])]
-                            ['extra {:init/tags [:test/extra]} (fn [])]]
+                            ['extra {:init/provides [:test/extra]} (fn [])]]
       (let [config (meta/find-components 'test.fn)
             simple (:test.fn/simple config)]
         (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
