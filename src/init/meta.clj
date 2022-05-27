@@ -55,9 +55,9 @@
   (-with-halt [_ h] (VarComponent. var h))
 
   config/Component
-  (-comp-key [_] (component-name var))
-  (-comp-provides [_] (var-provides var))
-  (-comp-deps [_] (var-deps var))
+  (-name [_] (component-name var))
+  (-provides [_] (var-provides var))
+  (-requires [_] (var-deps var))
 
   lifecycle/Init
   (-init [_ deps] (var-init var deps))

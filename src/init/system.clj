@@ -12,7 +12,7 @@
           (if (unique-dep? d)
             (-> r first system)
             (into #{} (map system) r)))
-        (config/-comp-deps component)
+        (config/-requires component)
         (config/resolve-deps config component)))
 
 ;; Should we keep a map of providers instead of singletons?

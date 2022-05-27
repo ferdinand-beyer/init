@@ -8,9 +8,9 @@
   ([key provides] (component key provides nil))
   ([key provides requires]
    (reify config/Component
-     (-comp-key [_] key)
-     (-comp-provides [_] provides)
-     (-comp-deps [_] requires))))
+     (-name [_] key)
+     (-provides [_] provides)
+     (-requires [_] requires))))
 
 (def settlers-components
   [[::bakery [::bread] [::flour ::water]]
@@ -50,13 +50,13 @@
                     (config/add-component comp)
                     (get ::foo)))))
 
-  (testing "duplicate component key"
+  (testing "duplicate component"
     (let [ex (-> {}
                  (config/add-component (component ::foo))
                  (config/add-component (component ::foo))
                  thrown)]
       (is (re-find #"(?i)duplicate" (ex-message ex)))
-      (is (= ::config/duplicate-key (-> ex ex-data :reason)))))
+      (is (= ::config/duplicate-component (-> ex ex-data :reason)))))
 
   (testing "replacing components"
     (let [old    (component ::foo)
@@ -109,7 +109,7 @@
     (let [config (make-config (conj settlers-components [::fishery [::fish]]))
           ex     (thrown (config/dependency-graph config config/resolve-unique))]
       (is (re-find #"(?i)ambiguous" (ex-message ex)))
-      (is (= ::config/ambiguous-tag (-> ex ex-data :reason))))))
+      (is (= ::config/ambiguous-dependency (-> ex ex-data :reason))))))
 
 (deftest dependency-order-test
   (let [config (make-config)]

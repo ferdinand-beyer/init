@@ -32,11 +32,11 @@
             simple (:test.const/simple config)]
         (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
                (-> config keys set)))
-        (is (= :test.const/simple (config/-comp-key simple)))
-        (is (empty? (config/-comp-deps simple)))
+        (is (= :test.const/simple (config/-name simple)))
+        (is (empty? (config/-requires simple)))
         (is (= :simple-value (lifecycle/-init simple nil)))
-        (is (empty? (-> config :test.const/private-tagged config/-comp-provides)))
-        (is (= #{:test/extra} (-> config :test.const/extra config/-comp-provides))))))
+        (is (empty? (-> config :test.const/private-tagged config/-provides)))
+        (is (= #{:test/extra} (-> config :test.const/extra config/-provides))))))
 
   (testing "finds function vars"
     (with-test-ns 'test.fn [['simple '{:arglists ([])} (fn [] :simple-value)]
@@ -49,11 +49,11 @@
             simple (:test.fn/simple config)]
         (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
                (-> config keys set)))
-        (is (= :test.fn/simple (config/-comp-key simple)))
-        (is (empty? (config/-comp-deps simple)))
+        (is (= :test.fn/simple (config/-name simple)))
+        (is (empty? (config/-requires simple)))
         (is (= :simple-value (lifecycle/-init simple nil)))
-        (is (empty? (-> config :test.fn/private-tagged config/-comp-provides)))
-        (is (= #{:test/extra} (-> config :test.fn/extra config/-comp-provides))))))
+        (is (empty? (-> config :test.fn/private-tagged config/-provides)))
+        (is (= #{:test/extra} (-> config :test.fn/extra config/-provides))))))
 
   (testing "finds halt hooks"
     (with-test-ns 'test.hooks [['start '{:arglists ([])} (fn [] :started)]

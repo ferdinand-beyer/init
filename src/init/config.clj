@@ -20,21 +20,13 @@
   clojure.lang.IPersistentSet
   (-tags [s] (vec s)))
 
-;; TODO: Rename to shorter names: -name -provides -requires
 (defprotocol Component
-  (-comp-key [this] "Returns the component key, a qualified keyword.")
-  (-comp-provides [this] "Returns additional tags this component provides.")
-  ;; This returns a sequence of selectors.
-  (-comp-deps [this] "Returns this component's dependencies."))
-
-;; TODO: Valid _tag_
-(defn valid-key?
-  "Returns true if `k` is a valid component key."
-  [k]
-  (qualified-keyword? k))
+  (-name [this] "Returns the component name, a qualified keyword.")
+  (-provides [this] "Returns additional tags this component provides.")
+  (-requires [this] "Returns selectors for required components."))
 
 (defn- provided-tags [component]
-  (into #{(-comp-key component)} (-comp-provides component)))
+  (into #{(-name component)} (-provides component)))
 
 (defn provides?
   "Returns true if `component` provides `selector`."
@@ -44,25 +36,29 @@
               (some #(isa? % t) provided))
             (-tags selector))))
 
-(defn- invalid-key-exception [k]
-  (ex-info (str "Invalid component key: " k ". Must be a qualified keyword.")
-           {:reason ::invalid-key, :key k}))
+(defn- invalid-name-exception [k]
+  (ex-info (str "Invalid component name: " k ". Must be a qualified keyword.")
+           {:reason ::invalid-name
+            :name   k}))
 
-(defn- duplicate-key-exception [k]
-  (ex-info (str "Duplicate component key: " k)
-           {:reason ::duplicate-key, :key k}))
+(defn- duplicate-component-exception [k]
+  (ex-info (str "Duplicate component: " k)
+           {:reason ::duplicate-component
+            :name   k}))
 
 (defn add-component
   "Adds a component to the configuration."
   [config component & {:keys [replace?]}]
   {:pre [(satisfies? Component component)]}
-  (let [k (-comp-key component)]
+  (let [k (-name component)]
     ;; TODO: Move this somewhere else (into-component?)
-    (when-not (valid-key? k)
-      (throw (invalid-key-exception k)))
+    (when-not (qualified-keyword? k)
+      (throw (invalid-name-exception k)))
     (when (and (not replace?) (contains? config k))
-      (throw (duplicate-key-exception k)))
+      (throw (duplicate-component-exception k)))
     (assoc config k component)))
+
+;; TODO: Add merge-configs
 
 (defn select
   "Returns a sequence of map entries from `config` with all components
@@ -72,16 +68,16 @@
 
 (defn- unsatisfied-dependency-exception [config component selector]
   (ex-info (str "Unsatisfied dependency: No component found providing " selector
-                " required by " (-comp-key component))
+                " required by " (-name component))
            {:reason    ::unsatisfied-dependency
             :config    config
             :component component
             :selector  selector}))
 
 (defn- ambiguous-dependency-exception [config component selector matching-keys]
-  (ex-info (str "Ambiguous dependency: " selector " for " (-comp-key component)
+  (ex-info (str "Ambiguous dependency: " selector " for " (-name component)
                 ". Found multiple candidates: " (str/join ", " matching-keys))
-           {:reason        ::ambiguous-tag
+           {:reason        ::ambiguous-dependency
             :config        config
             :component     component
             :selector      selector
@@ -107,7 +103,7 @@
   ([config component]
    (resolve-deps config component resolve-dependency))
   ([config component resolve-fn]
-   (map (partial resolve-fn config component) (-comp-deps component))))
+   (map (partial resolve-fn config component) (-requires component))))
 
 (defn- circular-dependency-exception [config key1 key2]
   (ex-info (str "Circular dependency between components " key1 " and " key2)
@@ -122,7 +118,9 @@
       ex)))
 
 (defn dependency-graph
-  "Builds a dependency graph on the keys in `config`."
+  "Builds a dependency graph on the keys in `config`.  Takes an optional
+   `resolve-fn` that can be used to customize dependency resolution, e.g.
+   to provide validation, ambiguity resolution, etc."
   ([config]
    (dependency-graph config resolve-dependency))
   ([config resolve-fn]
