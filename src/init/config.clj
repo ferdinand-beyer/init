@@ -20,11 +20,14 @@
   clojure.lang.IPersistentSet
   (-tags [s] (vec s)))
 
+;; TODO: Rename to shorter names: -name -provides -requires
 (defprotocol Component
   (-comp-key [this] "Returns the component key, a qualified keyword.")
   (-comp-provides [this] "Returns additional tags this component provides.")
+  ;; This returns a sequence of selectors.
   (-comp-deps [this] "Returns this component's dependencies."))
 
+;; TODO: Valid _tag_
 (defn valid-key?
   "Returns true if `k` is a valid component key."
   [k]
