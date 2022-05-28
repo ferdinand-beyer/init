@@ -35,7 +35,7 @@
 
 (defn test "Run the tests." [opts]
   (-> opts
-      (assoc :aliases [:test/run])
+      (assoc :aliases [:provided :test/run])
       (bb/run-tests)))
 
 (defn jar "Build the Jar." [opts]
