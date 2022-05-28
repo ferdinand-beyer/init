@@ -19,10 +19,17 @@
 (defn- git-tag []
   (git "describe" "--tags" "--exact-match"))
 
-(def version (if-let [tag (git-tag)]
-               (str/replace tag #"^v" "")
+(def tagged  (git-tag))
+(def version (if tagged
+               (str/replace tagged #"^v" "")
                (format "%s.%s-%s" base-version (b/git-count-revs nil)
                        (if (System/getenv "CI") "ci" "dev"))))
+
+(def repo-url (str "https://github.com/ferdinand-beyer/" (name lib)))
+
+(def scm {:connection (str "scm:git:" repo-url)
+          :tag        (or tagged "HEAD")
+          :url        repo-url})
 
 (defn tag [_]
   (let [tag (format "v%s.%s" base-version (b/git-count-revs nil))]
@@ -35,12 +42,12 @@
 
 (defn test "Run the tests." [opts]
   (-> opts
-      (assoc :aliases [:provided :test/run])
+      (assoc :aliases [:test/run])
       (bb/run-tests)))
 
 (defn jar "Build the Jar." [opts]
   (-> opts
-      (assoc :lib lib :version version)
+      (assoc :lib lib :version version :scm scm)
       (bb/clean)
       (bb/jar)))
 
