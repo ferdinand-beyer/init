@@ -1,6 +1,6 @@
 (ns init.meta
   (:require [init.config :as config]
-            [init.lifecycle :as lifecycle]
+            [init.protocols :as protocols]
             [init.inject :as inject]))
 
 ;; TODO: Define more functions based on metadata instead of the var?
@@ -37,25 +37,23 @@
   (-var [this])
   (-with-halt [this halt-var]))
 
-;; TODO: VarComponent isa inject/Producer?
-(deftype VarComponent [var ?producer ?halt-var]
+(deftype VarComponent [var producer ?halt-var]
   IVarComponent
   (-var [_] var)
-  (-with-halt [_ h] (VarComponent. var ?producer h))
+  (-with-halt [_ h] (VarComponent. var producer h))
 
-  config/Component
-  (-name [_] (component-name var))
-  (-provides [_] (var-provides var))
-  (-requires [_] (some-> ?producer inject/requires))
+  protocols/Component
+  (name [_] (component-name var))
+  (provided-tags [_] (var-provides var))
 
-  lifecycle/Init
-  (-init [_ deps]
-    (if ?producer
-      (inject/produce ?producer deps)
-      (var-get var)))
+  protocols/Dependent
+  (required [_] (protocols/required producer))
 
-  lifecycle/Halt
-  (-halt [_ instance]
+  protocols/Producer
+  (produce [_ deps] (protocols/produce producer deps))
+
+  protocols/Disposer
+  (dispose [_ instance]
     (when ?halt-var
       (?halt-var instance))))
 
@@ -66,8 +64,7 @@
 ;; TODO: Support :init/halt-fn in addition to :init/halts?
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn- var-component [var]
-  (let [producer (when (fn-var? var)
-                   (inject/injector (-> var meta :init/inject) var))]
+  (let [producer (inject/producer (-> var meta :init/inject) var)]
     (VarComponent. var producer nil)))
 
 ;; TODO: Better story on how to add non-tagged vars

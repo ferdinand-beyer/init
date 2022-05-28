@@ -1,8 +1,7 @@
 (ns init.meta-test
   (:require [clojure.test :refer [deftest is testing]]
-            [init.config :as config]
-            [init.lifecycle :as lifecycle]
-            [init.meta :as meta]))
+            [init.meta :as meta]
+            [init.protocols :as protocols]))
 
 (defn- with-test-ns-fn [name defs f]
   (assert (nil? (find-ns name)) "Test namespace already exist")
@@ -34,11 +33,11 @@
             simple (:test.const/simple config)]
         (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
                (-> config keys set)))
-        (is (= :test.const/simple (config/-name simple)))
-        (is (empty? (config/-requires simple)))
-        (is (= :simple-value (lifecycle/-init simple nil)))
-        (is (empty? (-> config :test.const/private-tagged config/-provides)))
-        (is (= #{:test/extra} (-> config :test.const/extra config/-provides))))))
+        (is (= :test.const/simple (protocols/name simple)))
+        (is (empty? (protocols/required simple)))
+        (is (= :simple-value (protocols/produce simple nil)))
+        (is (empty? (-> config :test.const/private-tagged protocols/provided-tags)))
+        (is (= #{:test/extra} (-> config :test.const/extra protocols/provided-tags))))))
 
   (testing "finds function vars"
     (with-test-ns 'test.fn [['simple '{:arglists ([])} (fn [] :simple-value)]
@@ -51,11 +50,11 @@
             simple (:test.fn/simple config)]
         (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
                (-> config keys set)))
-        (is (= :test.fn/simple (config/-name simple)))
-        (is (empty? (config/-requires simple)))
-        (is (= :simple-value (lifecycle/-init simple nil)))
-        (is (empty? (-> config :test.fn/private-tagged config/-provides)))
-        (is (= #{:test/extra} (-> config :test.fn/extra config/-provides))))))
+        (is (= :test.fn/simple (protocols/name simple)))
+        (is (empty? (protocols/required simple)))
+        (is (= :simple-value (protocols/produce simple nil)))
+        (is (empty? (-> config :test.fn/private-tagged protocols/provided-tags)))
+        (is (= #{:test/extra} (-> config :test.fn/extra protocols/provided-tags))))))
 
   (testing "finds halt hooks"
     (with-test-ns 'test.hooks [['start '{:init/name true} (fn [] :started)]
@@ -63,6 +62,6 @@
                                         :init/halts test.hooks/start} (fn [_] :stopped)]]
       (let [config (meta/find-components 'test.hooks)]
         (is (= [:test.hooks/start] (keys config)))
-        (is (= :stopped (lifecycle/-halt (:test.hooks/start config) nil)))))))
+        (is (= :stopped (protocols/dispose (:test.hooks/start config) nil)))))))
 
 ;; TODO: Test :init/inject

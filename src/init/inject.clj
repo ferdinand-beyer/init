@@ -1,37 +1,23 @@
 (ns init.inject
-  (:require [init.config :as config]))
+  (:require [init.config :as config]
+            [init.protocols :as protocols]))
 
 (defn- unqualified? [k]
   (nil? (namespace k)))
 
-;; XXX: Just add a (-validate)?
-(defprotocol Dependency
-  "Extenders must also extend config/Selector."
-  (-unique? [this] "Returns true if exactly one value is required."))
-
-;; TODO: Double-check if that is the right name. Producer? Injector?
-(defprotocol Producer
-  (-deps [this] "Returns the sequence of dependencies")
-  (-produce [this resolved] "Builds a value from resolved dependencies."))
-
-(defn requires [producer]
-  (-deps producer))
-
-(defn produce [producer resolved]
-  {:pre [(= (count resolved) (count (-deps producer)))]}
-  (-produce producer resolved))
-
 (defn- composite-producer
   [f producers]
   (reify
-    Producer
-    (-deps [_] (mapcat -deps producers))
-    (-produce [_ resolved]
+    protocols/Dependent
+    (required [_] (mapcat protocols/required producers))
+
+    protocols/Producer
+    (produce [_ deps]
       (->> producers
            (reduce (fn [[acc vals] p]
-                     (let [[vs remaining] (split-at (-> p -deps count) vals)]
-                       [(conj acc (-produce p vs)) remaining]))
-                   [[] resolved])
+                     (let [[vs remaining] (split-at (-> p protocols/required count) vals)]
+                       [(conj acc (protocols/produce p vs)) remaining]))
+                   [[] deps])
            first
            f))))
 
@@ -39,29 +25,33 @@
 
 (defn- unique-arg [selector]
   (reify
-    config/Selector
-    (-tags [_] (config/-tags selector))
+    protocols/Selector
+    (tags [_] (protocols/tags selector))
 
-    Dependency
-    (-unique? [_] true)
+    protocols/Dependency
+    (unique? [_] true)
 
-    Producer
-    (-deps [this] [this])
-    (-produce [_ [x]]
+    protocols/Dependent
+    (required [arg] [arg])
+
+    protocols/Producer
+    (produce [_ [x]]
       (assert (= 1 (count x)))
       (first x))))
 
 (defn- set-arg [selector]
   (reify
-    config/Selector
-    (-tags [_] (config/-tags selector))
+    protocols/Selector
+    (tags [_] (protocols/tags selector))
 
-    Dependency
-    (-unique? [_] false)
+    protocols/Dependency
+    (unique? [_] false)
 
-    Producer
-    (-deps [this] [this])
-    (-produce [_ [x]] (set x))))
+    protocols/Dependent
+    (required [arg] [arg])
+
+    protocols/Producer
+    (produce [_ [x]] (set x))))
 
 (defn- map-arg [m]
   (composite-producer #(zipmap (keys m) %) (vals m)))
@@ -123,18 +113,22 @@
 
 (defn- args-injector [inject-fn f producer]
   (reify
-    Producer
-    (-deps [_] (-deps producer))
-    (-produce [_ resolved]
-      (let [deps (-produce producer resolved)]
+    protocols/Dependent
+    (required [_] (protocols/required producer))
+
+    protocols/Producer
+    (produce [_ resolved]
+      (let [deps (protocols/produce producer resolved)]
         (fn [& args]
           (apply f (inject-fn args deps)))))))
 
 (defn- nullary-injector [f]
   (reify
-    Producer
-    (-deps [_] nil)
-    (-produce [_ _] (f))))
+    protocols/Dependent
+    (required [_] nil)
+
+    protocols/Producer
+    (produce [_ _] (f))))
 
 (defn- apply-injector [f producers]
   (composite-producer (partial apply f) producers))
@@ -180,8 +174,8 @@
   (into-last-injector f (parse-map body)))
 
 ;; TODO: Allow scalar value, e.g. `:init/inject ::something`
-(defn injector
-  "Returns an injector for the injection `spec` and a wrapped function `f`."
+(defn producer
+  "Returns a producer for the injection spec `spec` and a wrapped function `f`."
   [spec f]
   {:pre [(ifn? f)]} ; can be a var
   (if (or (nil? spec) (true? spec) (empty? spec))
