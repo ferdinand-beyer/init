@@ -1,6 +1,5 @@
 (ns init.inject
-  (:require [init.config :as config]
-            [init.protocols :as protocols]))
+  (:require [init.protocols :as protocols]))
 
 (defn- unqualified? [k]
   (nil? (namespace k)))

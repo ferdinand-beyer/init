@@ -18,10 +18,6 @@
 (defn- provided-tags [component]
   (into #{(protocols/name component)} (protocols/provided-tags component)))
 
-(defn- required-selectors [component]
-  (when (satisfies? protocols/Dependent component)
-    (protocols/required component)))
-
 (defn provides?
   "Returns true if `component` provides `selector`."
   [component selector]
@@ -49,16 +45,3 @@
    providing `selector`."
   [config selector]
   (->> config (filter #(provides? (val %) selector)) seq))
-
-(defn resolve-dependency
-  "Default dependency resolution function.  Resolves to any keys matching `selector`."
-  [config _ selector]
-  (keys (select config selector)))
-
-(defn resolve-deps
-  "Resolves dependencies of `component` in `config`.  Returns a sequence of
-   sequences: For every dependency, a sequence of matching keys."
-  ([config component]
-   (resolve-deps config component resolve-dependency))
-  ([config component resolve-fn]
-   (map (partial resolve-fn config component) (required-selectors component))))

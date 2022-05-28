@@ -41,21 +41,19 @@
       (is (false? (dep/depends? graph ::tc/lumberjack ::tc/farm))))))
 
 (deftest dependency-order-test
-  (let [config (tc/settlers)
-        graph  (graph/dependency-graph config)]
+  (let [graph (graph/dependency-graph (tc/settlers))]
     (is (= [::tc/forester ::tc/lumberjack]
            (graph/dependency-order graph [::tc/wood])))
     (is (= [::tc/farm ::tc/mill ::tc/well ::tc/bakery ::tc/iron-mine]
            (graph/dependency-order graph [::tc/iron])))
     (is (= [::tc/farm ::tc/mill ::tc/well ::tc/bakery ::tc/forester ::tc/iron-mine ::tc/lumberjack ::tc/kiln ::tc/blacksmith]
-           (graph/dependency-order graph (keys config))))))
+           (graph/dependency-order graph)))))
 
 (deftest reverse-dependency-order-test
-  (let [config (tc/settlers)
-        graph  (graph/dependency-graph config)]
+  (let [graph (graph/dependency-graph (tc/settlers))]
     (is (= [::tc/blacksmith ::tc/kiln ::tc/lumberjack]
            (graph/reverse-dependency-order graph [::tc/wood])))
     (is (= [::tc/blacksmith ::tc/iron-mine]
            (graph/reverse-dependency-order graph [::tc/iron])))
     (is (= [::tc/blacksmith ::tc/kiln ::tc/lumberjack ::tc/iron-mine ::tc/forester ::tc/bakery ::tc/well ::tc/mill ::tc/farm]
-           (graph/reverse-dependency-order graph (keys config))))))
+           (graph/reverse-dependency-order graph)))))
