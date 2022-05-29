@@ -1,0 +1,13 @@
+{:deps {local/deps {:local/root "."}}
+ :tasks {:requires ([babashka.fs :as fs])
+
+         build {:doc  "Builds the project's Jar file"
+                :task (clojure "-T:build jar")}
+         clean {:doc  "Cleans build files"
+                :task (fs/delete-tree "target")}
+         test  {:doc  "Runs the tests"
+                :task (clojure "-M:test:test/run")}
+         docs  {:doc  "Builds the docs"
+                :task (clojure "-X:codox")}
+         tag   {:doc  "Creates a git tag from the current commit"
+                :task (clojute "-T:build tag")}}}

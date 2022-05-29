@@ -50,7 +50,7 @@
   (required [_] (protocols/required producer))
 
   protocols/Producer
-  (produce [_ deps] (protocols/produce producer deps))
+  (produce [_ inputs] (protocols/produce producer inputs))
 
   protocols/Disposer
   (dispose [_ instance]
@@ -65,7 +65,7 @@
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn- var-component [var]
   (let [producer (inject/producer (-> var meta :init/inject) var)]
-    (VarComponent. var producer nil)))
+    (->VarComponent var producer nil)))
 
 ;; TODO: Better story on how to add non-tagged vars
 (defn implicit? [var]

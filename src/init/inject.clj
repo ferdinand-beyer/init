@@ -11,12 +11,12 @@
     (required [_] (mapcat protocols/required producers))
 
     protocols/Producer
-    (produce [_ deps]
+    (produce [_ inputs]
       (->> producers
-           (reduce (fn [[acc vals] p]
-                     (let [[vs remaining] (split-at (-> p protocols/required count) vals)]
-                       [(conj acc (protocols/produce p vs)) remaining]))
-                   [[] deps])
+           (reduce (fn [[acc inputs] p]
+                     (let [[is rst] (split-at (-> p protocols/required count) inputs)]
+                       [(conj acc (protocols/produce p is)) rst]))
+                   [[] inputs])
            first
            f))))
 
@@ -57,7 +57,7 @@
 
 ;; TODO: Improve error messages for all parsing
 
-(defmulti -parse-arg-clause (fn [clause _body] clause))
+(defmulti ^:private -parse-arg-clause (fn [clause _body] clause))
 
 (defmethod -parse-arg-clause :unique
   [_ body]
@@ -116,8 +116,8 @@
     (required [_] (protocols/required producer))
 
     protocols/Producer
-    (produce [_ resolved]
-      (let [deps (protocols/produce producer resolved)]
+    (produce [_ inputs]
+      (let [deps (protocols/produce producer inputs)]
         (fn [& args]
           (apply f (inject-fn args deps)))))))
 
@@ -150,7 +150,7 @@
        (conj (pop argv) (merge (peek argv) deps))))
    f producer))
 
-(defmulti -parse-inject-clause (fn [clause _body _f] clause))
+(defmulti ^:private -parse-inject-clause (fn [clause _body _f] clause))
 
 (defmethod -parse-inject-clause :partial
   [_ body f]

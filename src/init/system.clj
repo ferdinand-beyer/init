@@ -18,8 +18,8 @@
   "Initializes a system from a config map."
   ([config]
    (init config (keys config)))
-  ([config keys]
-   (init config (graph/dependency-graph config) keys))
+  ([config selectors]
+   (init config (graph/dependency-graph config) selectors))
   ([config graph selectors]
    (-> (reduce #(init-component %1 graph %2 (config %2))
                {}

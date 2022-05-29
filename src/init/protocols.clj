@@ -15,7 +15,7 @@
   (provided-tags [component]))
 
 (defprotocol Producer
-  (produce [producer args]))
+  (produce [producer inputs]))
 
 ;; TODO: Better name?
 (defprotocol Disposer
