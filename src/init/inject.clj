@@ -1,9 +1,6 @@
 (ns init.inject
   (:require [init.protocols :as protocols]))
 
-(defn- unqualified? [k]
-  (nil? (namespace k)))
-
 (defn- composite-producer
   [f producers]
   (reify
@@ -91,7 +88,7 @@
   clojure.lang.IPersistentVector
   (-parse-arg [[k & body :as v]]
     (assert k)
-    (if (unqualified? k)
+    (if (simple-keyword? k)
       (-parse-arg-clause k body)
       (unique-arg v)))
 
@@ -180,6 +177,6 @@
   (if (or (nil? spec) (true? spec) (empty? spec))
     (nullary-injector f)
     (let [[k & body] spec]
-      (if (and (some? k) (unqualified? k))
+      (if (and (some? k) (simple-keyword? k))
         (-parse-inject-clause k body f)
         (apply-injector f (map -parse-arg spec))))))
