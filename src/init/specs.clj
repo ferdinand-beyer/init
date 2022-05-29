@@ -18,27 +18,39 @@
         :symbol symbol?
         :var    var?))
 
-;;;; injection points
-
-(s/def ::inject-val-clause
-  (s/cat :clause #{:unique :set :map}
-         :tags   (s/+ ::tag)))
+;;;; injected values
 
 (s/def ::inject-set
   (s/coll-of ::tag
              :kind set?
              :min-count 1))
 
+(s/def ::inject-keys
+  (s/cat :clause #{:keys}
+         :keys   (s/+ ::tag)))
+
 (s/def ::inject-map
   (s/map-of keyword? ::inject-val
             :min-count 1))
 
+(s/def ::inject-get
+  (s/cat :clause #{:get}
+         :val    ::inject-val
+         :path   (s/+ keyword?)))
+
+(s/def ::inject-apply
+  (s/cat :clause #{:apply}
+         :fn     ifn?
+         :args   (s/* ::inject-val)))
+
 (s/def ::inject-val
   (s/or :tag      ::tag
         :selector (s/+ ::tag)
-        :clause   ::inject-val-clause
         :set      ::inject-set
-        :map      ::inject-map))
+        :keys     ::inject-keys
+        :map      ::inject-map
+        :get      ::inject-get
+        :apply    ::inject-apply))
 
 ;;;; inject
 

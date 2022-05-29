@@ -16,7 +16,7 @@
   (.write writer (if (protocols/unique? dep) "ref" "refset"))
   (print-method (protocols/tags dep) writer))
 
-;;;; value producers
+;;;; producers
 
 (defn- unique-producer [selector]
   (let [deps [(->Dependency selector true)]]
@@ -38,6 +38,28 @@
       protocols/Producer
       (produce [_ [x]] (set x)))))
 
+;;;; injectors
+
+(defn- nullary-injector [f]
+  (reify
+    protocols/Dependent
+    (required [_] nil)
+
+    protocols/Producer
+    (produce [_ _] (f))))
+
+;; TODO: Better name?
+(defn- decorate-producer
+  [f producer]
+  (reify
+    protocols/Dependent
+    (required [_] (protocols/required producer))
+
+    protocols/Producer
+    (produce [_ inputs]
+      (f (protocols/produce producer inputs)))))
+
+;; TODO: Better name?
 (defn- composite-producer
   [f producers]
   (reify
@@ -54,20 +76,10 @@
            first
            f))))
 
-(defn- map-producer [keys producers]
+(defn- map-injector [keys producers]
   (composite-producer #(zipmap keys %) producers))
 
-;;;; injectors: function-wrapping producers
-
-(defn- nullary-injector [f]
-  (reify
-    protocols/Dependent
-    (required [_] nil)
-
-    protocols/Producer
-    (produce [_ _] (f))))
-
-(defn- default-injector [f producers]
+(defn- apply-injector [f producers]
   (composite-producer #(apply f %) producers))
 
 (defn- partial-injector [f producers]
@@ -78,13 +90,7 @@
     (apply f (inject-fn args vals))))
 
 (defn- args-injector [inject-fn f producer]
-  (reify
-    protocols/Dependent
-    (required [_] (protocols/required producer))
-
-    protocols/Producer
-    (produce [_ inputs]
-      (inject-args f inject-fn (protocols/produce producer inputs)))))
+  (decorate-producer #(inject-args f inject-fn %) producer))
 
 (defn- into-first-injector [f producer]
   (args-injector
@@ -111,21 +117,7 @@
 
 (defn- parse-keys [tags]
   (let [tags (map parse-tag tags)]
-    (map-producer tags (map unique-producer tags))))
-
-(defmulti ^:private parse-val-clause :clause)
-
-(defmethod parse-val-clause :unique
-  [{:keys [tags]}]
-  (unique-producer (mapv parse-tag tags)))
-
-(defmethod parse-val-clause :set
-  [{:keys [tags]}]
-  (set-producer (mapv parse-tag tags)))
-
-(defmethod parse-val-clause :map
-  [{:keys [tags]}]
-  (parse-keys tags))
+    (map-injector tags (map unique-producer tags))))
 
 (defmulti ^:private parse-val first)
 
@@ -137,17 +129,27 @@
   [[_ tags]]
   (unique-producer (mapv parse-tag tags)))
 
-(defmethod parse-val :clause
-  [[_ clause]]
-  (parse-val-clause clause))
-
 (defmethod parse-val :set
   [[_ tags]]
   (set-producer (into #{} (map parse-tag) tags)))
 
+(defmethod parse-val :keys
+  [[_ {:keys [keys]}]]
+  (parse-keys keys))
+
 (defmethod parse-val :map
   [[_ m]]
-  (map-producer (keys m) (map parse-val (vals m))))
+  (map-injector (keys m) (map parse-val (vals m))))
+
+(defmethod parse-val :get
+  [[_ {:keys [val path]}]]
+  (let [producer (parse-val val)]
+    (decorate-producer #(get-in % path) producer)))
+
+(defmethod parse-val :apply
+  [[_ {:keys [fn args]}]]
+  (let [producers (map parse-val args)]
+    (apply-injector fn producers)))
 
 (defn value-producer
   "Builds a producer for injected values from the specification `form`."
@@ -164,7 +166,7 @@
 
 (defmethod parse-into-val :map
   [[_ m]]
-  (map-producer (keys m) (map parse-val (vals m))))
+  (map-injector (keys m) (map parse-val (vals m))))
 
 (defmulti ^:private parse-inject (fn [conformed _f] (first conformed)))
 
@@ -175,7 +177,7 @@
 (defmethod parse-inject :vals
   [[_ vals] f]
   (if (seq vals)
-    (default-injector f (map parse-val vals))
+    (apply-injector f (map parse-val vals))
     (nullary-injector f)))
 
 (defmethod parse-inject :partial

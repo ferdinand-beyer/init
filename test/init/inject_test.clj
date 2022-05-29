@@ -28,25 +28,17 @@
     (assert-unique [::foo] [::foo])
     (assert-unique [::foo ::bar] [::foo ::bar]))
 
-  (testing ":unique clause"
-    (assert-unique [:unique ::foo] [::foo])
-    (assert-unique [:unique ::foo ::bar] [::foo ::bar]))
+  (testing "set form"
+    (assert-set #{::foo} #{::foo})
+    (assert-set #{::foo ::bar} #{::foo ::bar}))
 
-  (testing ":set clause"
-    (assert-set [:set ::foo] [::foo])
-    (assert-set [:set ::foo ::bar] [::foo ::bar]))
-
-  (testing ":map clause"
-    (let [producer (inject/value-producer [:map ::foo ::bar])
+  (testing ":keys clause"
+    (let [producer (inject/value-producer [:keys ::foo ::bar])
           deps     (protocols/required producer)]
       (is (= 2 (count deps)))
       (is (every? protocols/unique? deps))
       (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
       (is (= {::foo 1, ::bar 2} (protocols/produce producer [[1] [2]])))))
-
-  (testing "set form"
-    (assert-set #{::foo} #{::foo})
-    (assert-set #{::foo ::bar} #{::foo ::bar}))
 
   (testing "map form"
     (let [producer (inject/value-producer {:f ::foo, :b ::bar})
@@ -65,7 +57,23 @@
       (is (= {:a {:f 1
                   :b 2}
               :s #{3 4}}
-             (protocols/produce producer [[1] [2] [3 4]]))))))
+             (protocols/produce producer [[1] [2] [3 4]])))))
+
+  (testing ":get form"
+    (let [producer (inject/value-producer [:get ::foo :key])
+          deps     (protocols/required producer)]
+      (is (= 1 (count deps)))
+      (is (protocols/unique? (first deps)))
+      (is (= [::foo] (protocols/tags (first deps))))
+      (is (= ::hello (protocols/produce producer [[{:key ::hello}]])))))
+
+  (testing ":apply form"
+    (let [producer (inject/value-producer [:apply - ::foo ::bar])
+          deps     (protocols/required producer)]
+      (is (= 2 (count deps)))
+      (is (every? protocols/unique? deps))
+      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
+      (is (= 5 (protocols/produce producer [[8] [3]]))))))
 
 (defn- assert-nullary [form]
   (let [producer (inject/producer form (fn [] ::value))]
