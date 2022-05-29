@@ -25,7 +25,7 @@
    (find-components {} namespaces))
   ([config namespaces]
    ;; TODO: Check for duplicates in merge
-   (reduce #(merge %1 (meta/find-components %2)) config namespaces)))
+   (reduce #(merge %1 (meta/namespace-config %2)) config namespaces)))
 
 ;; Classpath scanning
 ;; XXX: Move to init.discovery.scan?
