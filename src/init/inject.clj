@@ -4,6 +4,9 @@
             [init.specs :as specs]))
 
 (deftype Dependency [selector unique?]
+  Object
+  (toString [_] (str selector))
+
   protocols/Selector
   (tags [_] (protocols/tags selector))
 

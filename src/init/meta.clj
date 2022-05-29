@@ -88,6 +88,7 @@
     (inject/producer (-> var meta :init/inject) var)
     (val-producer var)))
 
+;; TODO: Check arity (w/ warning)?
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn component
   "Returns a component representing `var`.  Will not include information

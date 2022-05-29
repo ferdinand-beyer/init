@@ -1,12 +1,14 @@
-(ns todo-app.server)
+(ns todo-app.server
+  (:require [org.httpkit.server :as http]))
 
 (defn start-server
-  {:init/provides [:http/server]
-   :init/inject [:http.server/port]}
-  [port]
-  (println "Starting server..."))
+  {:init/provides [:init/daemon]
+   :init/inject [:ring/handler [:get :app/config :port]]}
+  [handler port]
+  (http/run-server handler {:port port
+                            :legacy-return-value? false}))
 
 (defn stop-server
   {:init/disposes #'start-server}
   [server]
-  (println "Stopping server..."))
+  (http/server-stop! server))
