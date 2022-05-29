@@ -75,6 +75,9 @@
       (is (= const-component (protocols/produce c nil)))
       (is (nil? (protocols/dispose c const-component)))))
 
+  (testing "nullary component"
+    (is (= ::simple (protocols/produce (meta/component #'simple-component) nil))))
+
   (testing "producer dependency injection"
     (let [c    (meta/component #'producer-component)
           deps (protocols/required c)]
