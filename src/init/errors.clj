@@ -3,7 +3,7 @@
             [init.protocols :as protocols]))
 
 (defn invalid-name-exception [k]
-  (ex-info (str "Invalid component name: " k ". Must be a qualified keyword.")
+  (ex-info (str "Invalid component name: " k ". Must be a qualified keyword or symbol.")
            {:reason ::invalid-name
             :name   k}))
 

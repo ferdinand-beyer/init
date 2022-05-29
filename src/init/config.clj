@@ -32,7 +32,7 @@
   {:pre [(satisfies? protocols/Component component)]}
   (let [k (protocols/name component)]
     ;; TODO: Move this somewhere else (into-component?)
-    (when-not (qualified-keyword? k)
+    (when-not (qualified-ident? k)
       (throw (errors/invalid-name-exception k)))
     (when (and (not replace?) (contains? config k))
       (throw (errors/duplicate-component-exception k)))
