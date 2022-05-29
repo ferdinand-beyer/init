@@ -7,6 +7,6 @@
   (println "Starting server..."))
 
 (defn stop-server
-  {:init/halts #'start-server}
+  {:init/disposes #'start-server}
   [server]
   (println "Stopping server..."))

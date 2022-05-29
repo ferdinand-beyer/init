@@ -117,15 +117,15 @@ As a convenience, allows injecting into runtime arguments.
 
 #### Instance lifecycle handlers
 
-* `:init/halt-fn` can be a function taking the component instance and perform
+* `:init/disposer` can be a function taking the component instance and perform
   clean-up.
 
-Handlers can be:
+Disposers can be:
 * Functions, e.g. declared inline or by resolving to a var in the same namespace
 * Symbols, resolving to function-valued vars
 * Vars containing functions implementing the handler (preferred)
 
-Handlers can also be specified reversely by metadata on a var.  `:init/halts`
+Handlers can also be specified reversely by metadata on a var.  `:init/disposes`
 must be a keyword, symbol or var referencing an existing component, and registers
 the var as a halt handler for the referenced component:
 
@@ -134,7 +134,7 @@ the var as a halt handler for the referenced component:
   (server/start))
 
 (def stop-server
-  {:init/halts #'start-server}
+  {:init/disposes #'start-server}
   [server]
   (server/stop server))
 ```

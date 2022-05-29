@@ -1,7 +1,10 @@
 (ns init.meta-test
   (:require [clojure.test :refer [are deftest is testing]]
             [init.meta :as meta]
-            [init.protocols :as protocols]))
+            [init.meta-test.disposes-not-in-config :as disposes-not-in-config]
+            [init.meta-test.disposes-unresolveable :as disposes-unresolveable]
+            [init.protocols :as protocols]
+            [init.test-support.helpers :refer [ex-info? thrown]]))
 
 (defn ^:init/name simple-component [] ::simple)
 
@@ -32,17 +35,17 @@
 (defn disposer [x] [:disposed x])
 
 (defn disposer-fn-component
-  {:init/halt-fn disposer}
+  {:init/disposer disposer}
   []
   ::disposer-fn)
 
 (defn disposer-var-component
-  {:init/halt-fn #'disposer}
+  {:init/disposer #'disposer}
   []
   ::disposer-var)
 
 (defn disposer-symbol-component
-  {:init/halt-fn 'disposer}
+  {:init/disposer 'disposer}
   []
   ::disposer-symbol)
 
@@ -93,52 +96,55 @@
       #'disposer-var-component
       #'disposer-symbol-component)))
 
-;; TODO: Fix tests -- they assume non-tagged vars to be added automatically.
-#_
-(deftest find-components-test
-  (testing "finds nothing in empty namespace"
-    (with-test-ns 'test.empty []
-      (is (= {} (meta/find-components 'test.empty)))))
+(defn ^:init/inject disposes-var-component [])
 
-  (testing "finds non-function vars"
-    (with-test-ns 'test.const '[[simple nil :simple-value]
-                                [implicit {:init/name :test/named} :named]
-                                [private {:private true} :private]
-                                [private-tagged {:private true :init/name true} :private-tagged]
-                                [extra {:init/provides [:test/extra]} :extra]]
-      (let [config (meta/find-components 'test.const)
-            simple (:test.const/simple config)]
-        (is (= #{:test.const/simple :test/named :test.const/private-tagged :test.const/extra}
-               (-> config keys set)))
-        (is (= :test.const/simple (protocols/name simple)))
-        (is (empty? (protocols/required simple)))
-        (is (= :simple-value (protocols/produce simple nil)))
-        (is (empty? (-> config :test.const/private-tagged protocols/provided-tags)))
-        (is (= #{:test/extra} (-> config :test.const/extra protocols/provided-tags))))))
+(defn disposes-var
+  {:init/disposes #'disposes-var-component}
+  [x]
+  (disposer x))
 
-  (testing "finds function vars"
-    (with-test-ns 'test.fn [['simple '{:arglists ([])} (fn [] :simple-value)]
-                            ['takes-args '{:arglists ([foo bar])} (fn [_ _])]
-                            ['implicit {:init/name :test/named} (fn [])]
-                            ['private {:private true} (fn [])]
-                            ['private-tagged {:private true :init/name true} (fn [])]
-                            ['extra {:init/provides [:test/extra]} (fn [])]]
-      (let [config (meta/find-components 'test.fn)
-            simple (:test.fn/simple config)]
-        (is (= #{:test.fn/simple :test/named :test.fn/private-tagged :test.fn/extra}
-               (-> config keys set)))
-        (is (= :test.fn/simple (protocols/name simple)))
-        (is (empty? (protocols/required simple)))
-        (is (= :simple-value (protocols/produce simple nil)))
-        (is (empty? (-> config :test.fn/private-tagged protocols/provided-tags)))
-        (is (= #{:test/extra} (-> config :test.fn/extra protocols/provided-tags))))))
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn ^:init/inject disposes-name-component [])
 
-  (testing "finds halt hooks"
-    (with-test-ns 'test.hooks [['start '{:init/name true} (fn [] :started)]
-                               ['stop '{:arglists ([x])
-                                        :init/halts test.hooks/start} (fn [_] :stopped)]]
-      (let [config (meta/find-components 'test.hooks)]
-        (is (= [:test.hooks/start] (keys config)))
-        (is (= :stopped (protocols/dispose (:test.hooks/start config) nil)))))))
+(defn disposes-name
+  {:init/disposes ::disposes-name-component}
+  [x]
+  (disposer x))
 
-;; TODO: Test :init/inject
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn ^:init/inject disposes-symbol-component [])
+
+(defn disposes-symbol
+  {:init/disposes 'disposes-symbol-component}
+  [x]
+  (disposer x))
+
+(defn ns-of [var]
+  (-> var meta :ns))
+
+(deftest namespace-config-test
+  (let [config (meta/namespace-config (ns-of #'simple-component))]
+
+    (testing "finds tagged components"
+      (is (contains? config ::simple-component) "tagged with :init/name")
+      (is (contains? config ::named))
+      (is (not (contains? config ::explicitly-named-component)) "using explicit name")
+      (is (contains? config ::providing-component) "tagged with :init/provides")
+      (is (contains? config ::producer-component) "tagged with :init/inject")
+      (is (not (contains? config ::implicitly-named-component)) "not tagged")
+      (is (not (contains? config ::disposes-var)) "tagged as disposer"))
+
+    (testing "indirect disposers"
+      (are [name disposer] (= (disposer name) (protocols/dispose (config name) name))
+        ::disposes-var-component disposes-var
+        ::disposes-name-component disposes-name
+        ::disposes-symbol-component disposes-symbol)))
+
+  (testing "definition errors"
+    (let [ex (thrown (meta/namespace-config (ns-of #'disposes-not-in-config/dispose)))]
+      (is (ex-info? ex))
+      (is (= :init.errors/component-not-found (-> ex ex-data :reason))))
+
+    (let [ex (thrown (meta/namespace-config (ns-of #'disposes-unresolveable/dispose)))]
+      (is (ex-info? ex))
+      (is (= :init.errors/component-not-found (-> ex ex-data :reason))))))

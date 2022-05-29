@@ -7,6 +7,14 @@
            {:reason ::invalid-name
             :name   k}))
 
+(defn component-not-found-exception [config name source]
+  (ex-info (str "The component " name " referenced by " source
+                " does not exist in the config map.")
+           {:reason ::component-not-found
+            :config config
+            :name   name
+            :source source}))
+
 (defn duplicate-component-exception [k]
   (ex-info (str "Duplicate component: " k)
            {:reason ::duplicate-component

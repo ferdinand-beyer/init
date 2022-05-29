@@ -66,17 +66,17 @@
         :multiple (s/coll-of ::tag)))
 
 (s/def :init/inject ::inject)
-(s/def :init/halt-fn ::hook)
-(s/def :init/halts ::ref)
+(s/def :init/disposer ::hook)
+(s/def :init/disposes ::ref)
 
 (s/def ::component-meta
   (s/keys :opt [:init/name
                 :init/provides
                 :init/inject
-                :init/halt-fn]))
+                :init/disposer]))
 
 (s/def ::hook-meta
-  (s/keys :opt [:init/halts]))
+  (s/keys :opt [:init/disposes]))
 
 (s/def ::meta
   (s/or :component ::component-meta

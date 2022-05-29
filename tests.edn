@@ -1,5 +1,5 @@
 #kaocha/v1
  {:plugins [:kaocha.plugin/cloverage]
-  :reporter #profile {:default kaocha.report.progress/progress
-                      :ci kaocha.report/documentation}
+  :reporter #profile {:default [kaocha.report.progress/report]
+                      :ci      [kaocha.report/documentation]}
   :cloverage/opts {:html? #profile {:default true, :ci false}}}

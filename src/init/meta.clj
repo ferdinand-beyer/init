@@ -1,7 +1,8 @@
 (ns init.meta
   (:require [init.config :as config]
-            [init.protocols :as protocols]
-            [init.inject :as inject]))
+            [init.errors :as errors]
+            [init.inject :as inject]
+            [init.protocols :as protocols]))
 
 ;; TODO: Define more functions based on metadata instead of the var?
 
@@ -43,8 +44,7 @@
 (defn- var-dispose [var halt-var value]
   (if halt-var
     (halt-var value)
-    ;; TODO: Can be a function, symbol or var.  Symbols need to be resolved.
-    (when-let [ref (-> var meta :init/halt-fn)]
+    (when-let [ref (-> var meta :init/disposer)]
       ((resolve-hook var ref) value))))
 
 (defprotocol IVarComponent
@@ -89,7 +89,7 @@
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn component
   "Returns a component representing `var`.  Will not include information
-   provided by other vars, such as `:init/halts`."
+   provided by other vars, such as `:init/disposes`."
   [var]
   (VarComponent. var (producer var) nil))
 
@@ -104,43 +104,27 @@
     (config/add-component config (component var))
     config))
 
-(defn- invalid-ref-exception [name]
-  (ex-info (str "Referenced component " name " not found")
-           {:reason ::invalid-ref
-            :name name}))
-
-(defn- find-component [config name]
-  (or (get config name)
-      (throw (invalid-ref-exception name))))
-
-(defprotocol IResolve
-  (-resolve [this config]))
-
-(extend-protocol IResolve
-  clojure.lang.Keyword
-  (-resolve [kw config] (find-component config kw))
-
-  clojure.lang.Symbol
-  (-resolve [sym config] (find-component config (keyword sym)))
-
-  clojure.lang.Var
-  (-resolve [var config] (find-component config (component-name var))))
+(defn- resolve-component-name [var ref]
+  (cond
+    (qualified-ident? ref) ref
+    (var? ref) (component-name ref)
+    (symbol? ref) (some-> (ns-resolve (-> var meta :ns) ref) component-name)))
 
 ;; TODO: Validate: Check for unary?
-(defn- add-halt [config var ref]
-  (let [component (-resolve ref config)]
-    (config/add-component config (-with-halt component var) :replace? true)))
-
+;; TODO: Validate: No disposer defined yet
 ;; TODO: Validate: No init-tags (not (tagged? var))
 (defn- register-hook [config var]
-  (let [{:init/keys [halts]} (meta var)]
-    (add-halt config var halts)))
+  (let [disposes  (-> var meta :init/disposes)
+        name      (resolve-component-name var disposes)]
+    (if-let [component (some-> name config)]
+      (config/add-component config (-with-halt component var) :replace? true)
+      (throw (errors/component-not-found-exception config (or name disposes) var)))))
 
 ;; Functions providing lifecycle handlers for existing components,
 ;; e.g. halt/stop, maybe suspend, resume, ...
 ;; TODO: "amend"? "decorators"?
 (defn- hook? [var]
-  (some #{:init/halts} (-> var meta keys)))
+  (contains? (meta var) :init/disposes))
 
 ;; TODO: Take options to e.g. only consider explicitly tagged vars?
 (defn namespace-config
