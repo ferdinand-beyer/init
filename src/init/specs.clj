@@ -79,4 +79,5 @@
   (s/keys :opt [:init/halts]))
 
 (s/def ::meta
-  (s/merge ::component-meta ::hook-meta))
+  (s/or :component ::component-meta
+        :hook      ::hook-meta))
