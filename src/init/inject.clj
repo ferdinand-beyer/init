@@ -16,7 +16,33 @@
   (.write writer (if (protocols/unique? dep) "ref" "refset"))
   (print-method (protocols/tags dep) writer))
 
-;;;; producers
+;;;; transform producers
+
+(defn- decorate-producer [f producer]
+  (reify
+    protocols/Dependent
+    (required [_] (protocols/required producer))
+
+    protocols/Producer
+    (produce [_ inputs]
+      (f (protocols/produce producer inputs)))))
+
+(defn- combine-producers [f producers]
+  (reify
+    protocols/Dependent
+    (required [_] (mapcat protocols/required producers))
+
+    protocols/Producer
+    (produce [_ inputs]
+      (->> producers
+           (reduce (fn [[acc inputs] p]
+                     (let [[cur rem] (split-at (-> p protocols/required count) inputs)]
+                       [(conj acc (protocols/produce p cur)) rem]))
+                   [[] inputs])
+           first
+           f))))
+
+;;;; value producers
 
 (defn- unique-producer [selector]
   (let [deps [(->Dependency selector true)]]
@@ -38,6 +64,9 @@
       protocols/Producer
       (produce [_ [x]] (set x)))))
 
+(defn- map-producer [keys producers]
+  (combine-producers #(zipmap keys %) producers))
+
 ;;;; injectors
 
 (defn- nullary-injector [f]
@@ -48,58 +77,27 @@
     protocols/Producer
     (produce [_ _] (f))))
 
-;; TODO: Better name?
-(defn- decorate-producer
-  [f producer]
-  (reify
-    protocols/Dependent
-    (required [_] (protocols/required producer))
-
-    protocols/Producer
-    (produce [_ inputs]
-      (f (protocols/produce producer inputs)))))
-
-;; TODO: Better name?
-(defn- composite-producer
-  [f producers]
-  (reify
-    protocols/Dependent
-    (required [_] (mapcat protocols/required producers))
-
-    protocols/Producer
-    (produce [_ inputs]
-      (->> producers
-           (reduce (fn [[acc inputs] p]
-                     (let [[cur rem] (split-at (-> p protocols/required count) inputs)]
-                       [(conj acc (protocols/produce p cur)) rem]))
-                   [[] inputs])
-           first
-           f))))
-
-(defn- map-injector [keys producers]
-  (composite-producer #(zipmap keys %) producers))
-
 (defn- apply-injector [f producers]
-  (composite-producer #(apply f %) producers))
+  (combine-producers #(apply f %) producers))
 
 (defn- partial-injector [f producers]
-  (composite-producer #(apply partial f %) producers))
+  (combine-producers #(apply partial f %) producers))
 
-(defn- inject-args [f inject-fn vals]
+(defn- into-args [f merge-fn inputs]
   (fn [& args]
-    (apply f (inject-fn args vals))))
+    (apply f (merge-fn args inputs))))
 
-(defn- args-injector [inject-fn f producer]
-  (decorate-producer #(inject-args f inject-fn %) producer))
+(defn- into-injector [merge-fn f producer]
+  (decorate-producer #(into-args f merge-fn %) producer))
 
 (defn- into-first-injector [f producer]
-  (args-injector
+  (into-injector
    (fn [[a & args] inputs]
      (cons (merge a inputs) args))
    f producer))
 
 (defn- into-last-injector [f producer]
-  (args-injector
+  (into-injector
    (fn [args inputs]
      (let [argv (vec args)]
        (conj (pop argv) (merge (peek argv) inputs))))
@@ -117,7 +115,7 @@
 
 (defn- parse-keys [tags]
   (let [tags (map parse-tag tags)]
-    (map-injector tags (map unique-producer tags))))
+    (map-producer tags (map unique-producer tags))))
 
 (defmulti ^:private parse-val first)
 
@@ -139,7 +137,7 @@
 
 (defmethod parse-val :map
   [[_ m]]
-  (map-injector (keys m) (map parse-val (vals m))))
+  (map-producer (keys m) (map parse-val (vals m))))
 
 (defmethod parse-val :get
   [[_ {:keys [val path]}]]
@@ -166,7 +164,7 @@
 
 (defmethod parse-into-val :map
   [[_ m]]
-  (map-injector (keys m) (map parse-val (vals m))))
+  (map-producer (keys m) (map parse-val (vals m))))
 
 (defmulti ^:private parse-inject (fn [conformed _f] (first conformed)))
 
