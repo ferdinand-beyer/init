@@ -10,10 +10,10 @@
   (tags [k] [k])
 
   clojure.lang.Sequential
-  (tags [s] (vec s))
+  (tags [s] s)
 
   clojure.lang.IPersistentSet
-  (tags [s] (vec s)))
+  (tags [s] s))
 
 (defn- provided-tags [component]
   (into #{(protocols/name component)} (protocols/provided-tags component)))

@@ -70,8 +70,10 @@
   (dispose [_ instance] (var-dispose var ?halt-var instance)))
 
 (defmethod print-method VarComponent
-  [c writer]
-  (.write writer (str "#component[" (-var c) "]")))
+  [c ^java.io.Writer writer]
+  (.write writer "#init/component[")
+  (print-method (-var c) writer)
+  (.write writer "]"))
 
 (defn- val-producer [var]
   (reify

@@ -24,17 +24,20 @@
   (s/cat :clause #{:unique :set :map}
          :tags   (s/+ ::tag)))
 
+(s/def ::inject-set
+  (s/coll-of ::tag
+             :kind set?
+             :min-count 1))
+
 (s/def ::inject-map
   (s/map-of keyword? ::inject-val
             :min-count 1))
 
 (s/def ::inject-val
   (s/or :tag      ::tag
-        :clause   ::inject-val-clause
         :selector (s/+ ::tag)
-        :set      (s/coll-of ::tag
-                             :kind set?
-                             :min-count 1)
+        :clause   ::inject-val-clause
+        :set      ::inject-set
         :map      ::inject-map))
 
 ;;;; inject
@@ -45,15 +48,14 @@
 
 (s/def ::inject-into
   (s/cat :clause #{:into-first :into-last}
-         :val    (s/alt :clause ::map-clause
-                        :map    ::inject-map
-                        :keys   (s/+ ::tag))))
+         :val    (s/alt :keys   (s/+ ::tag)
+                        :map    ::inject-map)))
 
 (s/def ::inject
   (s/or :tagged  true?
+        :vals    (s/* ::inject-val)
         :partial ::inject-partial
-        :into    ::inject-into
-        :vals    (s/* ::inject-val)))
+        :into    ::inject-into))
 
 ;;;; meta
 
