@@ -2,6 +2,9 @@
   (:require [init.graph :as graph]
             [init.protocols :as protocols]))
 
+;; TODO: Add hooks to report starting/stopping components, e.g. for logging
+
+;; TODO: Halt partially initialised system on exception
 (defn- init-component
   [system graph k component]
   {:pre [(satisfies? protocols/Producer component)]}
@@ -40,13 +43,3 @@
    (let [{::keys [config graph]} (meta system)]
      (doseq [k (graph/reverse-dependency-order graph selectors)]
        (halt-component! (config k) (system k))))))
-
-(comment
-  (require 'init.discovery)
-
-  (-> (init.discovery/load-components 'todo-app)
-      (init [:http/server])
-      (doto (prn))
-      (halt!))
-
-  )

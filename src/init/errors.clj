@@ -1,6 +1,16 @@
 (ns init.errors
   (:require [clojure.string :as str]
+            [clojure.spec.alpha :as s]
             [init.protocols :as protocols]))
+
+(defn spec-exception [spec value]
+  (let [data (s/explain-data spec value)]
+    (ex-info (str "Value does not conform to spec\n"
+                  (with-out-str (s/explain-out data)))
+             {:reason  ::failed-spec
+              :spec    spec
+              :value   value
+              :explain data})))
 
 (defn invalid-name-exception [k]
   (ex-info (str "Invalid component name: " k ". Must be a qualified keyword or symbol.")

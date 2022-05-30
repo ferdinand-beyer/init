@@ -58,6 +58,7 @@
   (s/cat :clause #{:partial}
          :vals   (s/* ::inject-val)))
 
+;; TODO: Just take one or more values and reduce them with (into)
 (s/def ::inject-into
   (s/cat :clause #{:into-first :into-last}
          :val    (s/alt :keys   (s/+ ::tag)

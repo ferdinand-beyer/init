@@ -1,5 +1,6 @@
 (ns init.inject
   (:require [clojure.spec.alpha :as s]
+            [init.errors :as errors]
             [init.protocols :as protocols]
             [init.specs :as specs]))
 
@@ -111,7 +112,7 @@
 (defn- conform [spec x]
   (let [ret (s/conform spec x)]
     (if (s/invalid? ret)
-      (throw (ex-info "Values does not conform to spec" (s/explain-data spec x)))
+      (throw (errors/spec-exception spec x))
       ret)))
 
 (def ^:private parse-tag second)

@@ -10,7 +10,7 @@
   (-> var meta :private))
 
 (defn- tagged? [var]
-  (->> var meta keys (some #{:init/name :init/provides :init/inject})))
+  (->> var meta keys (some #{:init/name :init/provides :init/inject :init/disposer})))
 
 (defn- fn-var? [var]
   (-> var meta :arglists))
@@ -27,7 +27,7 @@
       (keyword (-> m :ns ns-name name) (-> m :name name))
       k)))
 
-;; TODO: Support scalar :init/provides
+;; TODO: Support scalar :init/provides?
 ;; Tagging as ::untagged allows us to remove implicit/automatic components
 (defn- var-provides [var]
   (into #{} cat [(-> var meta :init/provides)
@@ -41,20 +41,20 @@
     (var? ref) ref
     (symbol? ref) (ns-resolve (-> var meta :ns) ref)))
 
-(defn- var-dispose [var halt-var value]
-  (if halt-var
-    (halt-var value)
+(defn- var-dispose [var disposer value]
+  (if disposer
+    (disposer value)
     (when-let [ref (-> var meta :init/disposer)]
       ((resolve-hook var ref) value))))
 
 (defprotocol IVarComponent
   (-var [this])
-  (-with-halt [this halt-var]))
+  (-with-disposer [this disposer]))
 
-(deftype VarComponent [var producer ?halt-var]
+(deftype VarComponent [var producer disposer]
   IVarComponent
   (-var [_] var)
-  (-with-halt [_ h] (VarComponent. var producer h))
+  (-with-disposer [_ d] (VarComponent. var producer d))
 
   protocols/Component
   (name [_] (component-name var))
@@ -67,7 +67,7 @@
   (produce [_ inputs] (protocols/produce producer inputs))
 
   protocols/Disposer
-  (dispose [_ instance] (var-dispose var ?halt-var instance)))
+  (dispose [_ instance] (var-dispose var disposer instance)))
 
 (defmethod print-method VarComponent
   [c ^java.io.Writer writer]
@@ -120,7 +120,7 @@
   (let [disposes  (-> var meta :init/disposes)
         name      (resolve-component-name var disposes)]
     (if-let [component (some-> name config)]
-      (config/add-component config (-with-halt component var) :replace? true)
+      (config/add-component config (-with-disposer component var) :replace? true)
       (throw (errors/component-not-found-exception config (or name disposes) var)))))
 
 ;; Functions providing lifecycle handlers for existing components,
