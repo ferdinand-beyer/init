@@ -32,7 +32,7 @@
     (assert-set #{::foo} #{::foo})
     (assert-set #{::foo ::bar} #{::foo ::bar}))
 
-  (testing ":keys clause"
+  (testing ":keys form"
     (let [producer (inject/value-producer [:keys ::foo ::bar])
           deps     (protocols/required producer)]
       (is (= 2 (count deps)))
@@ -80,23 +80,6 @@
     (is (empty? (protocols/required producer)))
     (is (= ::value (protocols/produce producer nil)))))
 
-(defn- assert-into-first [form]
-  (let [producer (inject/producer form assoc)
-        deps     (protocols/required producer)]
-    (is (= 1 (count deps)))
-    (is (= [[::foo]] (mapv protocols/tags deps)))
-    (let [f (protocols/produce producer [[1]])]
-      (is (= {::foo 1, ::bar 2, ::buzz 3}
-             (f {::bar 2} ::buzz 3))))))
-
-(defn- assert-into-last [form]
-  (let [producer (inject/producer form (fn [k v m] (assoc m k v)))
-        deps     (protocols/required producer)]
-    (is (= 1 (count deps)))
-    (is (= [[::foo]] (mapv protocols/tags deps)))
-    (let [f (protocols/produce producer [[1]])]
-      (is (= {::foo 1, ::bar 2, ::buzz 3} (f ::buzz 3 {::bar 2}))))))
-
 (deftest producer-test
   (testing "tagged"
     (assert-nullary true))
@@ -119,9 +102,17 @@
         (is (= "Hello, Init" (f "Init"))))))
 
   (testing ":into-first"
-    (assert-into-first [:into-first ::foo])
-    (assert-into-first [:into-first {::foo ::foo}]))
+    (let [producer (inject/producer [:into-first #{::foo}] conj)
+          deps     (protocols/required producer)]
+      (is (= 1 (count deps)))
+      (is (= [#{::foo}] (mapv protocols/tags deps)))
+      (let [f (protocols/produce producer [[:c]])]
+        (is (= [:a :b :c :d] (f [:a :b] :d))))))
 
   (testing ":into-last"
-    (assert-into-last [:into-last ::foo])
-    (assert-into-last [:into-last {::foo ::foo}])))
+    (let [producer (inject/producer [:into-last {:b ::foo}] (fn [k v m] (assoc m k v)))
+          deps     (protocols/required producer)]
+      (is (= 1 (count deps)))
+      (is (= [[::foo]] (mapv protocols/tags deps)))
+      (let [f (protocols/produce producer [[2]])]
+        (is (= {:a 1 :b 2 :c 3} (f :c 3 {:a 1})))))))

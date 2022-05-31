@@ -40,8 +40,8 @@
     (produce [_ inputs]
       (->> producers
            (reduce (fn [[acc inputs] p]
-                     (let [[cur rem] (split-at (-> p protocols/required count) inputs)]
-                       [(conj acc (protocols/produce p cur)) rem]))
+                     (let [[xs more] (split-at (-> p protocols/required count) inputs)]
+                       [(conj acc (protocols/produce p xs)) more]))
                    [[] inputs])
            first
            f))))
@@ -96,15 +96,15 @@
 
 (defn- into-first-injector [f producer]
   (into-injector
-   (fn [[a & args] inputs]
-     (cons (merge a inputs) args))
+   (fn [[coll & more] inputs]
+     (cons (into coll inputs) more))
    f producer))
 
 (defn- into-last-injector [f producer]
   (into-injector
    (fn [args inputs]
      (let [argv (vec args)]
-       (conj (pop argv) (merge (peek argv) inputs))))
+       (conj (pop argv) (into (peek argv) inputs))))
    f producer))
 
 ;;;; value parsers
@@ -160,16 +160,6 @@
 
 ;;;; injector parsers
 
-(defmulti ^:private parse-into-val first)
-
-(defmethod parse-into-val :keys
-  [[_ tags]]
-  (parse-keys tags))
-
-(defmethod parse-into-val :map
-  [[_ m]]
-  (map-producer (keys m) (map parse-val (vals m))))
-
 (defmulti ^:private parse-inject (fn [conformed _f] (first conformed)))
 
 (defmethod parse-inject :tagged
@@ -188,7 +178,7 @@
 
 (defmethod parse-inject :into
   [[_ {:keys [clause val]}] f]
-  (let [producer (parse-into-val val)]
+  (let [producer (parse-val val)]
     (case clause
       :into-first (into-first-injector f producer)
       :into-last  (into-last-injector f producer))))
