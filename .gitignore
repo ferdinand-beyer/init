@@ -1,8 +1,9 @@
 .calva/
-.clj-kondo/.cache/
+.clj-kondo/
 .cpcache/
 .lsp/
 .portal/
+.vscode/
 
 target/
 
