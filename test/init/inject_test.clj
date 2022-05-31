@@ -24,11 +24,11 @@
   (testing "tag"
     (assert-unique ::foo [::foo]))
 
-  (testing "selector"
+  (testing "seq of tags"
     (assert-unique [::foo] [::foo])
     (assert-unique [::foo ::bar] [::foo ::bar]))
 
-  (testing "set form"
+  (testing "set of tags"
     (assert-set #{::foo} #{::foo})
     (assert-set #{::foo ::bar} #{::foo ::bar}))
 

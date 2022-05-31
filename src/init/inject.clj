@@ -117,23 +117,41 @@
 
 (def ^:private parse-tag second)
 
+(defmulti ^:private parse-dep first)
+
+(defmethod parse-dep :tag
+  [[_ tag]]
+  (unique-producer (parse-tag tag)))
+
+(defmethod parse-dep :seq
+  [[_ tags]]
+  (unique-producer (mapv parse-tag tags)))
+
+(defmethod parse-dep :set
+  [[_ tags]]
+  (set-producer (into #{} (map parse-tag) tags)))
+
 (defn- parse-keys [tags]
   (let [tags (map parse-tag tags)]
     (map-producer tags (map unique-producer tags))))
 
 (defmulti ^:private parse-val first)
 
-(defmethod parse-val :tag
-  [[_ tag]]
-  (unique-producer (parse-tag tag)))
+(defmethod parse-val :dep
+  [[_ dep]]
+  (parse-dep dep))
 
-(defmethod parse-val :selector
-  [[_ tags]]
-  (unique-producer (mapv parse-tag tags)))
+;; (defmethod parse-val :tag
+;;   [[_ tag]]
+;;   (unique-producer (parse-tag tag)))
 
-(defmethod parse-val :set
-  [[_ tags]]
-  (set-producer (into #{} (map parse-tag) tags)))
+;; (defmethod parse-val :selector
+;;   [[_ tags]]
+;;   (unique-producer (mapv parse-tag tags)))
+
+;; (defmethod parse-val :set
+;;   [[_ tags]]
+;;   (set-producer (into #{} (map parse-tag) tags)))
 
 (defmethod parse-val :keys
   [[_ {:keys [keys]}]]

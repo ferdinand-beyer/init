@@ -8,15 +8,21 @@
         :symbol  qualified-symbol?
         :class   class?))
 
-(s/def ::ref
-  (s/or :name   ::name
-        :symbol symbol?
-        :var    var?))
+(s/def ::tags (s/coll-of ::tag))
 
-(s/def ::hook
-  (s/or :fn     fn?
-        :symbol symbol?
-        :var    var?))
+(s/def ::dep
+  (s/or :tag ::tag
+        :seq (s/+ ::tag)
+        :set (s/coll-of ::tag :kind set? :min-count 1)))
+
+(s/def ::deps (s/* ::dep))
+
+(s/def ::init fn?)
+(s/def ::halt fn?)
+
+(s/def ::component
+  (s/keys :req-un [::name ::init]
+          :opt-un [::tags ::deps ::halt]))
 
 ;;;; injected values
 
@@ -44,13 +50,11 @@
          :args   (s/* ::inject-val)))
 
 (s/def ::inject-val
-  (s/or :tag      ::tag
-        :selector (s/+ ::tag)
-        :set      ::inject-set
-        :keys     ::inject-keys
-        :map      ::inject-map
-        :get      ::inject-get
-        :apply    ::inject-apply))
+  (s/or :dep   ::dep
+        :keys  ::inject-keys
+        :map   ::inject-map
+        :get   ::inject-get
+        :apply ::inject-apply))
 
 ;;;; inject
 
@@ -70,17 +74,24 @@
 
 ;;;; meta
 
+(s/def ::meta-hook
+  (s/or :fn     fn?
+        :symbol symbol?
+        :var    var?))
+
+(s/def ::meta-ref
+  (s/or :name   ::name
+        :symbol symbol?
+        :var    var?))
+
 (s/def :init/name
   (s/or :tagged true?
         :name   ::name))
 
-(s/def :init/provides
-  (s/or :single   ::tag
-        :multiple (s/coll-of ::tag)))
-
-(s/def :init/inject ::inject)
-(s/def :init/disposer ::hook)
-(s/def :init/disposes ::ref)
+(s/def :init/provides ::tags)
+(s/def :init/inject   ::inject)
+(s/def :init/disposer ::meta-hook)
+(s/def :init/disposes ::meta-ref)
 
 (s/def ::component-meta
   (s/keys :opt [:init/name
