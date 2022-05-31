@@ -2,44 +2,7 @@
   (:require [clojure.set :as set]
             [init.config :as config]
             [init.errors :as errors]
-            [init.protocols :as protocols]
             [weavejester.dependency :as dep]))
-
-;; Defaults to unique.
-(defn- unique? [selector]
-  (or (not (satisfies? protocols/Dependency selector))
-      (protocols/unique? selector)))
-
-(defn- mandatory? [selector]
-  (unique? selector))
-
-(defn- resolve-dependency
-  [config component selector]
-  (let [keys (keys (config/select config selector))]
-    (cond
-      (and (mandatory? selector)
-           (empty? keys))
-      (throw (errors/unsatisfied-dependency-exception config component selector))
-
-      (and (unique? selector)
-           (next keys))
-      ;; XXX: Could provide a hook to resolve ambuiguity here.
-      (throw (errors/ambiguous-dependency-exception config component selector keys))
-
-      :else keys)))
-
-(defn- required-selectors [component]
-  (when (satisfies? protocols/Dependent component)
-    (protocols/required component)))
-
-(defn resolve-deps
-  "Resolves dependencies of `component` in `config`.  Returns a sequence of
-   sequences: For every dependency, a sequence of matching keys."
-  [config component]
-  (map (partial resolve-dependency config component) (required-selectors component)))
-
-(defn- resolve-config [config]
-  (update-vals config #(resolve-deps config %)))
 
 (defn- translate-exception [config ex]
   (let [ex-data (ex-data ex)]
@@ -49,11 +12,11 @@
 
 (defn- build-graph [config resolved]
   (try
-    (reduce-kv (fn [graph name resolved-deps]
+    (reduce-kv (fn [graph name deps]
                  (transduce cat
                             (completing #(dep/depend %1 name %2))
                             graph
-                            resolved-deps))
+                            deps))
                (dep/graph)
                resolved)
     (catch Exception ex
@@ -62,12 +25,17 @@
 (defn dependency-graph
   "Builds a dependency graph on the keys in `config`."
   [config]
-  (let [resolved (resolve-config config)
+  (let [resolved (config/resolve-config config)
         graph    (build-graph config resolved)]
     {:graph graph
      :config config
      ;; We only keep `resolved` around as the graph does not preserve order.
      :resolved resolved}))
+
+(defn get-component
+  "Returns a component by name."
+  [graph name]
+  (-> graph :config name))
 
 (defn required-keys
   "Returns resolved dependencies of the component with the given `key`, as

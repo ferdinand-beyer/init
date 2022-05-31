@@ -2,6 +2,8 @@
   (:require [init.graph :as graph]
             [init.protocols :as protocols]))
 
+;; TODO: Use graph/get-component so that we do not need to hold on the config
+
 ;; TODO: Add hooks to report starting/stopping components, e.g. for logging
 
 ;; TODO: Halt partially initialised system on exception

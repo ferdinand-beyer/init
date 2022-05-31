@@ -1,4 +1,4 @@
-{:deps {local/deps {:local/root "."}}
+{:deps  {local/deps {:local/root "."}}
  :tasks {:requires ([babashka.fs :as fs])
 
          build {:doc  "Builds the project's Jar file"
