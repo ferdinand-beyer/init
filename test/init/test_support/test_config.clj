@@ -1,6 +1,6 @@
 (ns init.test-support.test-config
   (:require [init.config :as config]
-            [init.protocols :as protocols]))
+            [init.component :as component]))
 
 (defn component
   ([name]
@@ -8,13 +8,10 @@
   ([name provides]
    (component name provides nil))
   ([name provides requires]
-   (reify
-     protocols/Component
-     (name [_] name)
-     (provided-tags [_] provides)
-
-     protocols/Dependent
-     (required [_] requires))))
+   (component/as-component
+    {:name name
+     :tags provides
+     :deps requires})))
 
 (defn make-config
   [comps]

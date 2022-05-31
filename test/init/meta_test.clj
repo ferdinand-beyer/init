@@ -1,9 +1,9 @@
 (ns init.meta-test
   (:require [clojure.test :refer [are deftest is testing]]
+            [init.component :as component]
             [init.meta :as meta]
             [init.meta-test.disposes-not-in-config :as disposes-not-in-config]
             [init.meta-test.disposes-unresolveable :as disposes-unresolveable]
-            [init.protocols :as protocols]
             [init.test-support.helpers :refer [ex-info? thrown]]))
 
 (defn ^:init/name simple-component [] ::simple)
@@ -50,51 +50,41 @@
   ::disposer-symbol)
 
 (deftest component-test
-  (testing "extends protocols"
-    (let [c (meta/component #'simple-component)]
-      (is (satisfies? protocols/Component c))
-      (is (satisfies? protocols/Dependent c))
-      (is (satisfies? protocols/Producer c))
-      (is (satisfies? protocols/Disposer c))))
-
   (testing "get wrapped var"
-    (is (= #'simple-component (meta/-var (meta/component #'simple-component)))))
+    (is (= #'simple-component (:var (meta/component #'simple-component)))))
 
   (testing "component names"
-    (is (= ::simple-component (protocols/name (meta/component #'simple-component))))
-    (is (= ::implicitly-named-component (protocols/name (meta/component #'implicitly-named-component))))
-    (is (= ::named (protocols/name (meta/component #'explicitly-named-component)))))
+    (is (= ::simple-component (:name (meta/component #'simple-component))))
+    (is (= ::implicitly-named-component (:name (meta/component #'implicitly-named-component))))
+    (is (= ::named (:name (meta/component #'explicitly-named-component)))))
 
   (testing "provided tags"
-    (is (empty? (protocols/provided-tags (meta/component #'simple-component))))
-    (is (= #{::extra} (protocols/provided-tags (meta/component #'providing-component)))))
+    (is (empty? (:tags (meta/component #'simple-component))))
+    (is (= #{::extra} (:tags (meta/component #'providing-component)))))
 
   (testing "constant component"
     (let [c (meta/component #'const-component)]
-      (is (empty? (protocols/required c)))
-      (is (= const-component (protocols/produce c nil)))
-      (is (nil? (protocols/dispose c const-component)))))
+      (is (empty? (:deps c)))
+      (is (= const-component (component/init c nil)))
+      (is (nil? (component/halt! c const-component)))))
 
   (testing "nullary component"
-    (is (= ::simple (protocols/produce (meta/component #'simple-component) nil))))
+    (is (= ::simple (component/init (meta/component #'simple-component) nil))))
 
   (testing "producer dependency injection"
     (let [c    (meta/component #'producer-component)
-          deps (protocols/required c)]
-      (is (every? #(satisfies? protocols/Selector %) deps))
-      (is (every? #(satisfies? protocols/Dependency %) deps))
-      (is (= [[::const] [::named]] (map protocols/tags deps)))
-      (is (every? protocols/unique? deps))
-      (is (= [:called-with :const :named] (protocols/produce c [[:const] [:named]])))))
+          deps (:deps c)]
+      (is (= [::const ::named] deps))
+      (is (= [:called-with :const :named] (component/init c [[:const] [:named]])))))
 
   (testing "partial dependency injection"
     (let [c (meta/component #'partially-injected-component)]
-      (is (= [[::const]] (map protocols/tags (protocols/required c))))
-      (let [f (protocols/produce c [[:injected]])]
+      (is (= [::const] (:deps c)))
+      (let [f (component/init c [[:injected]])]
         (is (= [:called-with :injected :runtime] (f :runtime))))))
 
   (testing "disposing components"
-    (are [var] (= [:disposed (var)] (protocols/dispose (meta/component var) (var)))
+    (are [var] (= [:disposed (var)] (component/halt! (meta/component var) (var)))
       #'disposer-fn-component
       #'disposer-var-component
       #'disposer-symbol-component)))
@@ -138,7 +128,7 @@
       (is (not (contains? config ::disposes-var)) "tagged as disposer"))
 
     (testing "indirect disposers"
-      (are [name disposer] (= (disposer name) (protocols/dispose (config name) name))
+      (are [name disposer] (= (disposer name) (component/halt! (config name) name))
         ::disposes-var-component disposes-var
         ::disposes-name-component disposes-name
         ::disposes-symbol-component disposes-symbol)))

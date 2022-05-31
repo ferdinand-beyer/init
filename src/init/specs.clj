@@ -17,6 +17,7 @@
 
 (s/def ::deps (s/* ::dep))
 
+;; TODO: :init-fn and :halt-fn?
 (s/def ::init fn?)
 (s/def ::halt fn?)
 

@@ -32,6 +32,8 @@
   (refresh :after `init))
 
 (comment
+  (discover)
+
   (reset)
   (halt)
 

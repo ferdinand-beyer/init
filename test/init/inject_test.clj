@@ -1,84 +1,64 @@
 (ns init.inject-test
   (:require [clojure.test :refer [deftest is testing]]
-            [init.inject :as inject]
-            [init.protocols :as protocols]))
+            [init.inject :as inject]))
 
-(defn- assert-unique [form tags]
-  (let [producer (inject/value-producer form)
-        deps     (protocols/required producer)]
+(defn- assert-unique [form]
+  (let [[init deps] (inject/value-producer form)]
     (is (= 1 (count deps)))
-    (is (protocols/unique? (first deps)))
-    (is (= tags (protocols/tags (first deps))))
-    (is (= ::input (protocols/produce producer [[::input]])))))
+    (is (= form (first deps)))
+    (is (= ::input (init [[::input]])))))
 
-(defn- assert-set [form tags]
-  (let [producer (inject/value-producer form)
-        deps     (protocols/required producer)]
+(defn- assert-set [form]
+  (let [[init deps] (inject/value-producer form)]
     (is (= 1 (count deps)))
-    (is (not (protocols/unique? (first deps))))
-    (is (= tags (protocols/tags (first deps))))
-    (is (= #{} (protocols/produce producer [nil])))
-    (is (= #{1 2 3} (protocols/produce producer [[1 2 3]])))))
+    (is (= form (first deps)))
+    (is (= #{} (init [nil])))
+    (is (= #{1 2 3} (init [[1 2 3]])))))
 
 (deftest value-producer-test
   (testing "tag"
-    (assert-unique ::foo [::foo]))
+    (assert-unique ::foo))
 
   (testing "seq of tags"
-    (assert-unique [::foo] [::foo])
-    (assert-unique [::foo ::bar] [::foo ::bar]))
+    (assert-unique [::foo])
+    (assert-unique [::foo ::bar]))
 
   (testing "set of tags"
-    (assert-set #{::foo} #{::foo})
-    (assert-set #{::foo ::bar} #{::foo ::bar}))
+    (assert-set #{::foo})
+    (assert-set #{::foo ::bar}))
 
   (testing ":keys form"
-    (let [producer (inject/value-producer [:keys ::foo ::bar])
-          deps     (protocols/required producer)]
-      (is (= 2 (count deps)))
-      (is (every? protocols/unique? deps))
-      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
-      (is (= {::foo 1, ::bar 2} (protocols/produce producer [[1] [2]])))))
+    (let [[init deps] (inject/value-producer [:keys ::foo ::bar])]
+      (is (= [::foo ::bar] deps))
+      (is (= {::foo 1, ::bar 2} (init [[1] [2]])))))
 
   (testing "map form"
-    (let [producer (inject/value-producer {:f ::foo, :b ::bar})
-          deps     (protocols/required producer)]
-      (is (= 2 (count deps)))
-      (is (every? protocols/unique? deps))
-      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
-      (is (= {:f 1, :b 2} (protocols/produce producer [[1] [2]])))))
+    (let [[init deps] (inject/value-producer {:f ::foo, :b ::bar})]
+      (is (= [::foo ::bar] deps))
+      (is (= {:f 1, :b 2} (init [[1] [2]])))))
 
   (testing "nested map form"
-    (let [producer (inject/value-producer {:a {:f ::foo, :b ::bar}, :s #{::spam ::eggs}})
-          deps     (protocols/required producer)]
-      (is (= 3 (count deps)))
-      (is (= [[::foo] [::bar] #{::spam ::eggs}] (mapv protocols/tags deps)))
-      (is (= [true true false] (mapv protocols/unique? deps)))
+    (let [[init deps] (inject/value-producer {:a {:f ::foo, :b ::bar}, :s #{::spam ::eggs}})]
+      (is (= [::foo ::bar #{::spam ::eggs}] deps))
       (is (= {:a {:f 1
                   :b 2}
               :s #{3 4}}
-             (protocols/produce producer [[1] [2] [3 4]])))))
+             (init [[1] [2] [3 4]])))))
 
   (testing ":get form"
-    (let [producer (inject/value-producer [:get ::foo :key])
-          deps     (protocols/required producer)]
-      (is (= 1 (count deps)))
-      (is (protocols/unique? (first deps)))
-      (is (= [::foo] (protocols/tags (first deps))))
-      (is (= ::hello (protocols/produce producer [[{:key ::hello}]])))))
+    (let [[init deps] (inject/value-producer [:get ::foo :key])]
+      (is (= [::foo] deps))
+      (is (= ::hello (init [[{:key ::hello}]])))))
 
   (testing ":apply form"
-    (let [producer (inject/value-producer [:apply - ::foo ::bar])
-          deps     (protocols/required producer)]
-      (is (= 2 (count deps)))
-      (is (every? protocols/unique? deps))
-      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
-      (is (= 5 (protocols/produce producer [[8] [3]]))))))
+    (let [[init deps] (inject/value-producer [:apply - ::foo ::bar])]
+      (is (= [::foo ::bar] deps))
+      (is (= 5 (init [[8] [3]]))))))
 
 (defn- assert-nullary [form]
-  (let [producer (inject/producer form (fn [] ::value))]
-    (is (empty? (protocols/required producer)))
-    (is (= ::value (protocols/produce producer nil)))))
+  (let [[init deps] (inject/producer form (fn [] ::value))]
+    (is (empty? deps))
+    (is (= ::value (init nil)))))
 
 (deftest producer-test
   (testing "tagged"
@@ -86,33 +66,25 @@
 
   (testing "vals"
     (assert-nullary [])
-    (let [producer (inject/producer [::foo ::bar] -)
-          deps     (protocols/required producer)]
-      (is (= 2 (count deps)))
-      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
-      (is (= 3 (protocols/produce producer [[7] [4]])))))
+    (let [[init deps] (inject/producer [::foo ::bar] -)]
+      (is (= [::foo ::bar] deps))
+      (is (= 3 (init [[7] [4]])))))
 
   (testing ":partial"
-    (let [producer (inject/producer [:partial ::foo ::bar] str)
-          deps     (protocols/required producer)]
-      (is (= 2 (count deps)))
-      (is (= [[::foo] [::bar]] (mapv protocols/tags deps)))
-      (let [f (protocols/produce producer [["Hello"] [", "]])]
+    (let [[init deps] (inject/producer [:partial ::foo ::bar] str)]
+      (is (= [::foo ::bar] deps))
+      (let [f (init [["Hello"] [", "]])]
         (is (= "Hello, World" (f "World")))
         (is (= "Hello, Init" (f "Init"))))))
 
   (testing ":into-first"
-    (let [producer (inject/producer [:into-first #{::foo}] conj)
-          deps     (protocols/required producer)]
-      (is (= 1 (count deps)))
-      (is (= [#{::foo}] (mapv protocols/tags deps)))
-      (let [f (protocols/produce producer [[:c]])]
+    (let [[init deps] (inject/producer [:into-first #{::foo}] conj)]
+      (is (= [#{::foo}] deps))
+      (let [f (init [[:c]])]
         (is (= [:a :b :c :d] (f [:a :b] :d))))))
 
   (testing ":into-last"
-    (let [producer (inject/producer [:into-last {:b ::foo}] (fn [k v m] (assoc m k v)))
-          deps     (protocols/required producer)]
-      (is (= 1 (count deps)))
-      (is (= [[::foo]] (mapv protocols/tags deps)))
-      (let [f (protocols/produce producer [[2]])]
+    (let [[init deps] (inject/producer [:into-last {:b ::foo}] (fn [k v m] (assoc m k v)))]
+      (is (= [::foo] deps))
+      (let [f (init [[2]])]
         (is (= {:a 1 :b 2 :c 3} (f :c 3 {:a 1})))))))

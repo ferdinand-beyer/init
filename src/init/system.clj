@@ -1,6 +1,6 @@
 (ns init.system
-  (:require [init.graph :as graph]
-            [init.protocols :as protocols]))
+  (:require [init.component :as component]
+            [init.graph :as graph]))
 
 ;; TODO: Use graph/get-component so that we do not need to hold on the config
 
@@ -8,12 +8,11 @@
 
 ;; TODO: Halt partially initialised system on exception
 (defn- init-component
-  [system graph k component]
-  {:pre [(satisfies? protocols/Producer component)]}
-  (->> (graph/required-keys graph k)
+  [system graph name component]
+  (->> (graph/required-keys graph name)
        (map (partial map system))
-       (protocols/produce component)
-       (assoc system k)))
+       (component/init component)
+       (assoc system name)))
 
 ;; We could keep an atom of the current system and support a special
 ;; component protocol for system-aware components.  Those could receive
@@ -31,12 +30,6 @@
                (graph/dependency-order graph selectors))
        (with-meta {::config config, ::graph graph}))))
 
-;; TODO: Support on-instance disposal, e.g. Closeable
-(defn- halt-component!
-  [component instance]
-  (when (satisfies? protocols/Disposer component)
-    (protocols/dispose component instance)))
-
 (defn halt!
   "Halts a system map."
   ([system]
@@ -44,4 +37,4 @@
   ([system selectors]
    (let [{::keys [config graph]} (meta system)]
      (doseq [k (graph/reverse-dependency-order graph selectors)]
-       (halt-component! (config k) (system k))))))
+       (component/halt! (config k) (system k))))))

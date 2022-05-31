@@ -1,7 +1,6 @@
 (ns init.errors
   (:require [clojure.string :as str]
-            [clojure.spec.alpha :as s]
-            [init.protocols :as protocols]))
+            [clojure.spec.alpha :as s]))
 
 (defn spec-exception [spec value]
   (let [data (s/explain-data spec value)]
@@ -32,14 +31,14 @@
 
 (defn unsatisfied-dependency-exception [config component selector]
   (ex-info (str "Unsatisfied dependency: No component found providing " selector
-                " required by " (protocols/name component))
+                " required by " (:name component))
            {:reason    ::unsatisfied-dependency
             :config    config
             :component component
             :selector  selector}))
 
 (defn ambiguous-dependency-exception [config component selector matching-keys]
-  (ex-info (str "Ambiguous dependency: " selector " for " (protocols/name component)
+  (ex-info (str "Ambiguous dependency: " selector " for " (:name component)
                 ". Found multiple candidates: " (str/join ", " matching-keys))
            {:reason        ::ambiguous-dependency
             :config        config

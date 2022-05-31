@@ -1,8 +1,8 @@
 (ns init.meta
   (:require [init.config :as config]
             [init.errors :as errors]
-            [init.inject :as inject]
-            [init.protocols :as protocols]))
+            [init.component :as component]
+            [init.inject :as inject]))
 
 ;; TODO: Define more functions based on metadata instead of the var?
 
@@ -41,52 +41,10 @@
     (var? ref) ref
     (symbol? ref) (ns-resolve (-> var meta :ns) ref)))
 
-(defn- var-dispose [var disposer value]
-  (if disposer
-    (disposer value)
-    (when-let [ref (-> var meta :init/disposer)]
-      ((resolve-hook var ref) value))))
-
-(defprotocol IVarComponent
-  (-var [this])
-  (-with-disposer [this disposer]))
-
-(deftype VarComponent [var producer disposer]
-  IVarComponent
-  (-var [_] var)
-  (-with-disposer [_ d] (VarComponent. var producer d))
-
-  protocols/Component
-  (name [_] (component-name var))
-  (provided-tags [_] (var-provides var))
-
-  protocols/Dependent
-  (required [_] (protocols/required producer))
-
-  protocols/Producer
-  (produce [_ inputs] (protocols/produce producer inputs))
-
-  protocols/Disposer
-  (dispose [_ instance] (var-dispose var disposer instance)))
-
-(defmethod print-method VarComponent
-  [c ^java.io.Writer writer]
-  (.write writer "#init/component[")
-  (print-method (-var c) writer)
-  (.write writer "]"))
-
-(defn- val-producer [var]
-  (reify
-    protocols/Dependent
-    (required [_] nil)
-
-    protocols/Producer
-    (produce [_ _] (var-get var))))
-
 (defn- producer [var]
   (if (fn-var? var)
     (inject/producer (-> var meta :init/inject) var)
-    (val-producer var)))
+    [(fn [_] (var-get var)) nil]))
 
 ;; TODO: Check arity (w/ warning)?
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
@@ -94,7 +52,20 @@
   "Returns a component representing `var`.  Will not include information
    provided by other vars, such as `:init/disposes`."
   [var]
-  (VarComponent. var (producer var) nil))
+  (let [[init deps] (producer var)
+        tags (var-provides var)
+        halt (when-let [ref (-> var meta :init/disposer)]
+               (resolve-hook var ref))]
+    (cond-> {:var var
+             :name (component-name var)
+             :init init}
+      deps (assoc :deps deps)
+      tags (assoc :tags tags)
+      halt (assoc :halt halt))))
+
+(extend-protocol component/AsComponent
+  clojure.lang.Var
+  (as-component [var] (component var)))
 
 ;; TODO: Better story on how to add non-tagged vars
 (defn- implicit? [var]
@@ -120,7 +91,7 @@
   (let [disposes  (-> var meta :init/disposes)
         name      (resolve-component-name var disposes)]
     (if-let [component (some-> name config)]
-      (config/add-component config (-with-disposer component var) :replace? true)
+      (config/add-component config (assoc component :halt var) :replace? true)
       (throw (errors/component-not-found-exception config (or name disposes) var)))))
 
 ;; Functions providing lifecycle handlers for existing components,

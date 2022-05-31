@@ -1,72 +1,37 @@
 (ns init.inject
   (:require [clojure.spec.alpha :as s]
             [init.errors :as errors]
-            [init.protocols :as protocols]
             [init.specs :as specs]))
 
-(deftype Dependency [selector unique?]
-  Object
-  (toString [_] (str selector))
-
-  protocols/Selector
-  (tags [_] (protocols/tags selector))
-
-  protocols/Dependency
-  (unique? [_] unique?))
-
-(defmethod print-method Dependency
-  [dep ^java.io.Writer writer]
-  (.write writer "#init/")
-  (.write writer (if (protocols/unique? dep) "ref" "refset"))
-  (print-method (protocols/tags dep) writer))
+;; TODO: Is "producer" still an appropriate term for [fn deps]?
 
 ;;;; transform producers
 
-(defn- decorate-producer [f producer]
-  (reify
-    protocols/Dependent
-    (required [_] (protocols/required producer))
+(defn- compose [f [p deps]]
+  [(comp f p) deps])
 
-    protocols/Producer
-    (produce [_ inputs]
-      (f (protocols/produce producer inputs)))))
-
+;; TODO: Better name
 (defn- combine-producers [f producers]
-  (reify
-    protocols/Dependent
-    (required [_] (mapcat protocols/required producers))
-
-    protocols/Producer
-    (produce [_ inputs]
-      (->> producers
-           (reduce (fn [[acc inputs] p]
-                     (let [[xs more] (split-at (-> p protocols/required count) inputs)]
-                       [(conj acc (protocols/produce p xs)) more]))
-                   [[] inputs])
-           first
-           f))))
+  (let [init (fn [inputs]
+               (->> producers
+                    (reduce (fn [[acc inputs] [p deps]]
+                              (let [[xs more] (split-at (count deps) inputs)]
+                                [(conj acc (p xs)) more]))
+                            [[] inputs])
+                    first
+                    f))
+        deps (mapcat second producers)]
+    [init deps]))
 
 ;;;; value producers
 
 (defn- unique-producer [selector]
-  (let [deps [(->Dependency selector true)]]
-    (reify
-      protocols/Dependent
-      (required [_] deps)
+  [ffirst [selector]])
 
-      protocols/Producer
-      (produce [_ [x]]
-        (assert (= 1 (count x)))
-        (first x)))))
+(def ^:private first->set (comp set first))
 
 (defn- set-producer [selector]
-  (let [deps [(->Dependency selector false)]]
-    (reify
-      protocols/Dependent
-      (required [_] deps)
-
-      protocols/Producer
-      (produce [_ [x]] (set x)))))
+  [first->set [selector]])
 
 (defn- map-producer [keys producers]
   (combine-producers #(zipmap keys %) producers))
@@ -74,12 +39,7 @@
 ;;;; injectors
 
 (defn- nullary-injector [f]
-  (reify
-    protocols/Dependent
-    (required [_] nil)
-
-    protocols/Producer
-    (produce [_ _] (f))))
+  [(fn [_] (f)) nil])
 
 (defn- apply-injector [f producers]
   (combine-producers #(apply f %) producers))
@@ -92,7 +52,7 @@
     (apply f (merge-fn args inputs))))
 
 (defn- into-injector [merge-fn f producer]
-  (decorate-producer #(into-args f merge-fn %) producer))
+  (compose #(into-args f merge-fn %) producer))
 
 (defn- into-first-injector [f producer]
   (into-injector
@@ -164,7 +124,7 @@
 (defmethod parse-val :get
   [[_ {:keys [val path]}]]
   (let [producer (parse-val val)]
-    (decorate-producer #(get-in % path) producer)))
+    (compose #(get-in % path) producer)))
 
 (defmethod parse-val :apply
   [[_ {:keys [fn args]}]]
