@@ -11,6 +11,7 @@
   [(comp f p) deps])
 
 ;; TODO: Better name
+;; TODO: Optimize common case for just one producer (compose)
 (defn- combine-producers [f producers]
   (let [init (fn [inputs]
                (->> producers
