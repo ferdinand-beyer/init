@@ -14,28 +14,28 @@
 (defn discover []
   (discovery/load-components 'todo-app))
 
-(defn init []
+(defn start []
   (alter-var-root #'system
                   (fn [_]
                     (-> (discover)
-                        (system/init))))
-  (prn :initialized (keys system))
+                        (system/start))))
+  (prn :started (keys system))
   :ok)
 
-(defn halt []
-  (prn :halting (keys system))
-  (alter-var-root #'system (fn [s] (some-> s system/halt!)))
+(defn stop []
+  (prn :stopping (keys system))
+  (alter-var-root #'system (fn [s] (some-> s system/stop)))
   :ok)
 
 (defn reset []
-  (halt)
-  (refresh :after `init))
+  (stop)
+  (refresh :after `start))
 
 (comment
   (discover)
 
   (reset)
-  (halt)
+  (stop)
 
   (clojure.tools.namespace.repl/clear)
   (clojure.tools.namespace.repl/refresh)

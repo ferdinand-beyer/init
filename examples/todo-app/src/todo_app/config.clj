@@ -4,7 +4,7 @@
 
 (defn load-config
   {:init/name ::config
-   :init/provides [:app/config]}
+   :init/tags [:app/config]}
   []
   (-> (io/resource "config.edn")
       (aero/read-config)))

@@ -30,12 +30,12 @@
       (every? matches? selector)
       (matches? selector))))
 
-(defn init [component inputs]
-  {:pre [(:init component)
+(defn start [component inputs]
+  {:pre [(:start-fn component)
          (= (count inputs) (count (:deps component)))]}
-  ((:init component) inputs))
+  ((:start-fn component) inputs))
 
-;; TODO: Support on-instance disposal, e.g. Closeable
-(defn halt! [component value]
-  (when-let [halt (:halt component)]
-    (halt value)))
+;; TODO: Support values with stop semantics, e.g. AutoCloseable
+(defn stop [component value]
+  (when-let [stop-fn (:stop-fn component)]
+    (stop-fn value)))

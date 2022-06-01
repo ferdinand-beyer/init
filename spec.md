@@ -28,9 +28,9 @@ selector.
 A data structure derived from a configuration, by resolving component
 dependencies.
 
-### (Component) Instance
+### Component Instance
 
-A concrete instance of a component; the result of initialising the component.
+A concrete instance of a component; the result of starting the component.
 
 ### System
 
@@ -47,9 +47,9 @@ that, there are more convenient ways.
 Configuration using metadata on vars.  All metadata uses keyword keys with
 the `init` namespace.
 
-### Components / providers
+### Components
 
-Vars can be interpreted as components and providers.
+Vars can be interpreted as components.
 
 * Public vars without `:arglists` metadata, i.e. values
 * Public vars with `:arglists` metadata that contains `[]`, i.e. nullary
@@ -69,8 +69,7 @@ and must be a qualified keyword.
 
 #### Tags
 
-Additional tags can be specified with the `:init/provides` metadata, which must be
-a sequence of qualified keywords.
+Additional tags can be specified with the `:init/tags` metadata.
 
 #### Injection Points
 
@@ -117,24 +116,24 @@ As a convenience, allows injecting into runtime arguments.
 
 #### Instance lifecycle handlers
 
-* `:init/disposer` can be a function taking the component instance and perform
+* `:init/stop-fn` can be a function taking the component instance and perform
   clean-up.
 
-Disposers can be:
+Stop functions can referenced via:
 * Functions, e.g. declared inline or by resolving to a var in the same namespace
 * Symbols, resolving to function-valued vars
 * Vars containing functions implementing the handler (preferred)
 
-Handlers can also be specified reversely by metadata on a var.  `:init/disposes`
+Handlers can also be specified reversely by metadata on a var.  `:init/stops`
 must be a keyword, symbol or var referencing an existing component, and registers
-the var as a halt handler for the referenced component:
+the var as a stop function for the referenced component:
 
 ```clojure
 (def start-server []
   (server/start))
 
 (def stop-server
-  {:init/disposes #'start-server}
+  {:init/stops #'start-server}
   [server]
   (server/stop server))
 ```
@@ -170,6 +169,8 @@ Maps:
 * `{:some/tag :some/tag}`
 * `{:some/tag #{:supports/nesting}}`
 * `{:key {:can :be/renamed}}`
+
+TODO: This is out of date!
 
 ## Discovery
 

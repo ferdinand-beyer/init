@@ -6,11 +6,14 @@
 
 ;; TODO: Define more functions based on metadata instead of the var?
 
+(def ^:private component-keys
+  #{:init/name :init/tags :init/inject :init/stop-fn})
+
 (defn- private? [var]
   (-> var meta :private))
 
 (defn- tagged? [var]
-  (->> var meta keys (some #{:init/name :init/provides :init/inject :init/disposer})))
+  (->> var meta keys (some component-keys)))
 
 (defn- fn-var? [var]
   (-> var meta :arglists))
@@ -27,12 +30,8 @@
       (keyword (-> m :ns ns-name name) (-> m :name name))
       k)))
 
-;; TODO: Support scalar :init/provides?
-;; Tagging as ::untagged allows us to remove implicit/automatic components
-(defn- var-provides [var]
-  (into #{} cat [(-> var meta :init/provides)
-                 (when-not (tagged? var)
-                   [::untagged])]))
+(defn- var-tags [var]
+  (-> var meta :init/tags set))
 
 (defn- resolve-hook [var ref]
   ;; TODO: Just conform the spec?
@@ -50,18 +49,18 @@
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn component
   "Returns a component representing `var`.  Will not include information
-   provided by other vars, such as `:init/disposes`."
+   provided by other vars, such as `:init/stops`."
   [var]
-  (let [[init deps] (producer var)
-        tags (var-provides var)
-        halt (when-let [ref (-> var meta :init/disposer)]
-               (resolve-hook var ref))]
-    (cond-> {:var var
-             :name (component-name var)
-             :init init}
-      deps (assoc :deps deps)
-      tags (assoc :tags tags)
-      halt (assoc :halt halt))))
+  (let [[start-fn deps] (producer var)
+        tags    (var-tags var)
+        stop-fn (when-let [ref (-> var meta :init/stop-fn)]
+                  (resolve-hook var ref))]
+    (cond-> {:var      var
+             :name     (component-name var)
+             :start-fn start-fn}
+      tags    (assoc :tags tags)
+      deps    (assoc :deps deps)
+      stop-fn (assoc :stop-fn stop-fn))))
 
 (extend-protocol component/AsComponent
   clojure.lang.Var
@@ -85,20 +84,20 @@
     (symbol? ref) (some-> (ns-resolve (-> var meta :ns) ref) component-name)))
 
 ;; TODO: Validate: Check for unary?
-;; TODO: Validate: No disposer defined yet
-;; TODO: Validate: No init-tags (not (tagged? var))
+;; TODO: Validate: No stop-fn defined yet
+;; TODO: Validate: Var is not a component (component-keys)
 (defn- register-hook [config var]
-  (let [disposes  (-> var meta :init/disposes)
-        name      (resolve-component-name var disposes)]
+  (let [stops (-> var meta :init/stops)
+        name  (resolve-component-name var stops)]
     (if-let [component (some-> name config)]
-      (config/add-component config (assoc component :halt var) :replace? true)
-      (throw (errors/component-not-found-exception config (or name disposes) var)))))
+      (config/add-component config (assoc component :stop-fn var) :replace? true)
+      (throw (errors/component-not-found-exception config (or name stops) var)))))
 
 ;; Functions providing lifecycle handlers for existing components,
-;; e.g. halt/stop, maybe suspend, resume, ...
+;; e.g. stop, maybe suspend, resume, ...
 ;; TODO: "amend"? "decorators"?
 (defn- hook? [var]
-  (contains? (meta var) :init/disposes))
+  (contains? (meta var) :init/stops))
 
 ;; TODO: Take options to e.g. only consider explicitly tagged vars?
 (defn namespace-config

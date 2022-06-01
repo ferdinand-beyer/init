@@ -4,11 +4,10 @@
 (s/def ::name qualified-ident?)
 
 (s/def ::tag
-  (s/or :keyword qualified-keyword?
-        :symbol  qualified-symbol?
-        :class   class?))
+  (s/or :name  ::name
+        :class class?))
 
-(s/def ::tags (s/coll-of ::tag))
+(s/def ::tags (s/coll-of ::tag :into #{}))
 
 (s/def ::dep
   (s/or :tag ::tag
@@ -17,20 +16,14 @@
 
 (s/def ::deps (s/* ::dep))
 
-;; TODO: :init-fn and :halt-fn?
-(s/def ::init fn?)
-(s/def ::halt fn?)
+(s/def ::start-fn fn?)
+(s/def ::stop-fn fn?)
 
 (s/def ::component
-  (s/keys :req-un [::name ::init]
-          :opt-un [::tags ::deps ::halt]))
+  (s/keys :req-un [::name ::start-fn]
+          :opt-un [::tags ::deps ::stop-fn]))
 
 ;;;; injected values
-
-(s/def ::inject-set
-  (s/coll-of ::tag
-             :kind set?
-             :min-count 1))
 
 (s/def ::inject-keys
   (s/cat :clause #{:keys}
@@ -89,19 +82,20 @@
   (s/or :tagged true?
         :name   ::name))
 
-(s/def :init/provides ::tags)
-(s/def :init/inject   ::inject)
-(s/def :init/disposer ::meta-hook)
-(s/def :init/disposes ::meta-ref)
+(s/def :init/tags    ::tags)
+(s/def :init/inject  ::inject)
+(s/def :init/stop-fn ::meta-hook)
+
+(s/def :init/stops ::meta-ref)
 
 (s/def ::component-meta
   (s/keys :opt [:init/name
-                :init/provides
+                :init/tags
                 :init/inject
-                :init/disposer]))
+                :init/stop-fn]))
 
 (s/def ::hook-meta
-  (s/keys :opt [:init/disposes]))
+  (s/keys :opt [:init/stops]))
 
 (s/def ::meta
   (s/or :component ::component-meta

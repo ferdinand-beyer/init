@@ -5,4 +5,4 @@
 
 (defn -main []
   (-> (discovery/load-components 'todo-app)
-      (system/init)))
+      (system/start)))

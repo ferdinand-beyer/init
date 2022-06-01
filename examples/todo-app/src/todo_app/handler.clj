@@ -7,14 +7,14 @@
   (-> (resp/response "OK")
       (resp/content-type "text/plain")))
 
-(def ^{:init/provides [:reitit/route-data]} probe-routes
+(def ^{:init/tags [:reitit/route-data]} probe-routes
   ["/healthz" health-check-handler])
 
 (defn home-handler [_]
   (-> (resp/response "Hello, World!")
       (resp/content-type "text/html")))
 
-(def ^{:init/provides [:reitit/route-data]} main-routes
+(def ^{:init/tags [:reitit/route-data]} main-routes
   ["/" home-handler])
 
 (defn router
@@ -26,7 +26,7 @@
   [defaults/wrap-defaults defaults/site-defaults])
 
 (defn ring-handler
-  {:init/provides [:ring/handler]
+  {:init/tags [:ring/handler]
    :init/inject [::router ::default-middleware]}
   [router middleware]
   (ring/ring-handler router {:middleware [middleware]}))

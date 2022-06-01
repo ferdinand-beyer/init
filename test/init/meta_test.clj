@@ -2,8 +2,8 @@
   (:require [clojure.test :refer [are deftest is testing]]
             [init.component :as component]
             [init.meta :as meta]
-            [init.meta-test.disposes-not-in-config :as disposes-not-in-config]
-            [init.meta-test.disposes-unresolveable :as disposes-unresolveable]
+            [init.meta-test.stops-not-in-config :as stops-not-in-config]
+            [init.meta-test.stops-unresolveable :as stops-unresolveable]
             [init.test-support.helpers :refer [ex-info? thrown]]))
 
 (defn ^:init/name simple-component [] ::simple)
@@ -16,7 +16,7 @@
   ::explicit-name)
 
 (defn providing-component
-  {:init/provides [::extra]}
+  {:init/tags [::extra]}
   []
   ::provides)
 
@@ -32,22 +32,22 @@
   [injected runtime-arg]
   [:called-with injected runtime-arg])
 
-(defn disposer [x] [:disposed x])
+(defn stop [x] [:stopped x])
 
-(defn disposer-fn-component
-  {:init/disposer disposer}
+(defn stop-fn-component
+  {:init/stop-fn stop}
   []
-  ::disposer-fn)
+  ::stop-fn)
 
-(defn disposer-var-component
-  {:init/disposer #'disposer}
+(defn stop-var-component
+  {:init/stop-fn #'stop}
   []
-  ::disposer-var)
+  ::stop-var)
 
-(defn disposer-symbol-component
-  {:init/disposer 'disposer}
+(defn stop-symbol-component
+  {:init/stop-fn 'stop}
   []
-  ::disposer-symbol)
+  ::stop-symbol)
 
 (deftest component-test
   (testing "get wrapped var"
@@ -65,52 +65,52 @@
   (testing "constant component"
     (let [c (meta/component #'const-component)]
       (is (empty? (:deps c)))
-      (is (= const-component (component/init c nil)))
-      (is (nil? (component/halt! c const-component)))))
+      (is (= const-component (component/start c nil)))
+      (is (nil? (component/stop c const-component)))))
 
   (testing "nullary component"
-    (is (= ::simple (component/init (meta/component #'simple-component) nil))))
+    (is (= ::simple (component/start (meta/component #'simple-component) nil))))
 
   (testing "producer dependency injection"
     (let [c    (meta/component #'producer-component)
           deps (:deps c)]
       (is (= [::const ::named] deps))
-      (is (= [:called-with :const :named] (component/init c [[:const] [:named]])))))
+      (is (= [:called-with :const :named] (component/start c [[:const] [:named]])))))
 
   (testing "partial dependency injection"
     (let [c (meta/component #'partially-injected-component)]
       (is (= [::const] (:deps c)))
-      (let [f (component/init c [[:injected]])]
+      (let [f (component/start c [[:injected]])]
         (is (= [:called-with :injected :runtime] (f :runtime))))))
 
-  (testing "disposing components"
-    (are [var] (= [:disposed (var)] (component/halt! (meta/component var) (var)))
-      #'disposer-fn-component
-      #'disposer-var-component
-      #'disposer-symbol-component)))
+  (testing "stopping components"
+    (are [var] (= [:stopped (var)] (component/stop (meta/component var) (var)))
+      #'stop-fn-component
+      #'stop-var-component
+      #'stop-symbol-component)))
 
-(defn ^:init/inject disposes-var-component [])
+(defn ^:init/inject stops-var-component [])
 
-(defn disposes-var
-  {:init/disposes #'disposes-var-component}
+(defn stops-var
+  {:init/stops #'stops-var-component}
   [x]
-  (disposer x))
+  (stop x))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn ^:init/inject disposes-name-component [])
+(defn ^:init/inject stops-name-component [])
 
-(defn disposes-name
-  {:init/disposes ::disposes-name-component}
+(defn stops-name
+  {:init/stops ::stops-name-component}
   [x]
-  (disposer x))
+  (stop x))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn ^:init/inject disposes-symbol-component [])
+(defn ^:init/inject stops-symbol-component [])
 
-(defn disposes-symbol
-  {:init/disposes 'disposes-symbol-component}
+(defn stops-symbol
+  {:init/stops 'stops-symbol-component}
   [x]
-  (disposer x))
+  (stop x))
 
 (defn ns-of [var]
   (-> var meta :ns))
@@ -125,19 +125,19 @@
       (is (contains? config ::providing-component) "tagged with :init/provides")
       (is (contains? config ::producer-component) "tagged with :init/inject")
       (is (not (contains? config ::implicitly-named-component)) "not tagged")
-      (is (not (contains? config ::disposes-var)) "tagged as disposer"))
+      (is (not (contains? config ::stops-var)) "tagged as stop"))
 
-    (testing "indirect disposers"
-      (are [name disposer] (= (disposer name) (component/halt! (config name) name))
-        ::disposes-var-component disposes-var
-        ::disposes-name-component disposes-name
-        ::disposes-symbol-component disposes-symbol)))
+    (testing "indirect stops"
+      (are [name stop] (= (stop name) (component/stop (config name) name))
+        ::stops-var-component stops-var
+        ::stops-name-component stops-name
+        ::stops-symbol-component stops-symbol)))
 
   (testing "definition errors"
-    (let [ex (thrown (meta/namespace-config (ns-of #'disposes-not-in-config/dispose)))]
+    (let [ex (thrown (meta/namespace-config (ns-of #'stops-not-in-config/stop)))]
       (is (ex-info? ex))
       (is (= :init.errors/component-not-found (-> ex ex-data :reason))))
 
-    (let [ex (thrown (meta/namespace-config (ns-of #'disposes-unresolveable/dispose)))]
+    (let [ex (thrown (meta/namespace-config (ns-of #'stops-unresolveable/stop)))]
       (is (ex-info? ex))
       (is (= :init.errors/component-not-found (-> ex ex-data :reason))))))
