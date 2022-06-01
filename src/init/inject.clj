@@ -10,19 +10,19 @@
 (defn- compose [f [p deps]]
   [(comp f p) deps])
 
-;; TODO: Better name
-;; TODO: Optimize common case for just one producer (compose)
-(defn- combine-producers [f producers]
-  (let [init (fn [inputs]
-               (->> producers
-                    (reduce (fn [[acc inputs] [p deps]]
-                              (let [[xs more] (split-at (count deps) inputs)]
-                                [(conj acc (p xs)) more]))
-                            [[] inputs])
-                    first
-                    f))
-        deps (mapcat second producers)]
-    [init deps]))
+(defn- combine [f producers]
+  (if-not (next producers)
+    (compose (comp f vector) (first producers))
+    (let [init (fn [inputs]
+                 (->> producers
+                      (reduce (fn [[acc inputs] [p deps]]
+                                (let [[xs more] (split-at (count deps) inputs)]
+                                  [(conj acc (p xs)) more]))
+                              [[] inputs])
+                      first
+                      f))
+          deps (mapcat second producers)]
+      [init deps])))
 
 ;;;; value producers
 
@@ -35,7 +35,7 @@
   [first->set [selector]])
 
 (defn- map-producer [keys producers]
-  (combine-producers #(zipmap keys %) producers))
+  (combine #(zipmap keys %) producers))
 
 ;;;; injectors
 
@@ -43,10 +43,10 @@
   [(fn [_] (f)) nil])
 
 (defn- apply-injector [f producers]
-  (combine-producers #(apply f %) producers))
+  (combine #(apply f %) producers))
 
 (defn- partial-injector [f producers]
-  (combine-producers #(apply partial f %) producers))
+  (combine #(apply partial f %) producers))
 
 (defn- into-args [f merge-fn inputs]
   (fn [& args]
