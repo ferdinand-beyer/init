@@ -55,16 +55,18 @@
         tags    (var-tags var)
         stop-fn (when-let [ref (-> var meta :init/stop-fn)]
                   (resolve-hook var ref))]
-    (cond-> {:var      var
-             :name     (component-name var)
-             :start-fn start-fn}
-      tags    (assoc :tags tags)
-      deps    (assoc :deps deps)
-      stop-fn (assoc :stop-fn stop-fn))))
+    (-> {:var      var
+         :name     (component-name var)
+         :start-fn start-fn}
+        (cond->
+         tags    (assoc :tags tags)
+         deps    (assoc :deps deps)
+         stop-fn (assoc :stop-fn stop-fn))
+        component/component)))
 
 (extend-protocol component/AsComponent
   clojure.lang.Var
-  (as-component [var] (component var)))
+  (component [var] (component var)))
 
 ;; TODO: Better story on how to add non-tagged vars
 (defn- implicit? [var]

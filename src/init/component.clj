@@ -1,17 +1,17 @@
 (ns init.component
   (:require [init.errors :as errors]))
 
-(defrecord Component [name init])
+(defrecord Component [name start-fn])
 
 (defprotocol AsComponent
-  (as-component [x]))
+  (component [x]))
 
 (extend-protocol AsComponent
   Component
-  (as-component [c] c)
+  (component [c] c)
 
   clojure.lang.IPersistentMap
-  (as-component [{:keys [name] :as m}]
+  (component [{:keys [name] :as m}]
     (when-not (qualified-ident? name)
       (throw (errors/invalid-name-exception name)))
     (map->Component m)))

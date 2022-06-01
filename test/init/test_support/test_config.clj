@@ -8,10 +8,9 @@
   ([name provides]
    (component name provides nil))
   ([name provides requires]
-   (component/as-component
-    {:name name
-     :tags provides
-     :deps requires})))
+   (component/component {:name name
+                         :tags provides
+                         :deps requires})))
 
 (defn make-config
   [comps]

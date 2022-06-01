@@ -10,7 +10,7 @@
 (defn add-component
   "Adds a component to the configuration."
   [config component & {:keys [replace?]}]
-  (let [component (component/as-component component)
+  (let [component (component/component component)
         name      (:name component)]
     (when (and (not replace?) (contains? config name))
       (throw (errors/duplicate-component-exception name)))
