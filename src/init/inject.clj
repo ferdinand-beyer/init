@@ -3,9 +3,16 @@
             [init.errors :as errors]
             [init.specs :as specs]))
 
+;; Producers are pairs [f deps], where deps is a sequence of dependencies
+;; and f a function taking a sequence of resolved values and producing a single
+;; value.  Resolved values are themselves sequences, as every dependency
+;; potentially matches zero or more components.
 ;; TODO: Is "producer" still an appropriate term for [fn deps]?
 
-;;;; transform producers
+;;;; composing producers
+
+;; ? collect functions in a vector, compose them at the end.  This would allow
+;; introspection and maybe use in macros?
 
 (defn- compose [f [p deps]]
   [(comp f p) deps])
@@ -13,16 +20,15 @@
 (defn- combine [f producers]
   (if-not (next producers)
     (compose (comp f vector) (first producers))
-    (let [init (fn [inputs]
-                 (->> producers
-                      (reduce (fn [[acc inputs] [p deps]]
-                                (let [[xs more] (split-at (count deps) inputs)]
-                                  [(conj acc (p xs)) more]))
-                              [[] inputs])
-                      first
-                      f))
-          deps (mapcat second producers)]
-      [init deps])))
+    [(fn [inputs]
+       (->> producers
+            (reduce (fn [[acc inputs] [p deps]]
+                      (let [[xs more] (split-at (count deps) inputs)]
+                        [(conj acc (p xs)) more]))
+                    [[] inputs])
+            first
+            f))
+     (mapcat second producers)]))
 
 ;;;; value producers
 
@@ -101,18 +107,6 @@
 (defmethod parse-val :dep
   [[_ dep]]
   (parse-dep dep))
-
-;; (defmethod parse-val :tag
-;;   [[_ tag]]
-;;   (unique-producer (parse-tag tag)))
-
-;; (defmethod parse-val :selector
-;;   [[_ tags]]
-;;   (unique-producer (mapv parse-tag tags)))
-
-;; (defmethod parse-val :set
-;;   [[_ tags]]
-;;   (set-producer (into #{} (map parse-tag) tags)))
 
 (defmethod parse-val :keys
   [[_ {:keys [keys]}]]
