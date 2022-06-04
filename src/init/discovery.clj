@@ -43,7 +43,9 @@
   (apply some-fn (map ns-prefix-pred prefixes)))
 
 (defn find-namespaces
-  "Returns namespaces whose names start with one of the `prefixes`."
+  "Returns namespaces whose names start with one of the `prefixes`.  Can be
+   used together with [[from-namespaces]] to build a config from loaded
+   namespaces, found by `prefixes`."
   [prefixes]
   (filter (comp (some-prefix-pred prefixes) ns-name) (all-ns)))
 
@@ -81,13 +83,13 @@
    (from-namespaces config (load-namespaces prefixes))))
 
 (defn- emit-config [config]
-  (let [syms          (->> (vals config)
+  (let [libspecs      (->> (vals config)
                            (map #(-> %1 :var meta :ns ns-name))
-                           (into #{}))
-        require-args  (map #(list `quote %) syms)
+                           (into #{})
+                           (map #(list `quote %)))
         static-config (update-vals config (fn [{:keys [var hook-vars]}]
                                             `(meta/component ~var ~hook-vars)))]
-    `(do (require ~@require-args)
+    `(do (require ~@libspecs)
          ~static-config)))
 
 (defmacro static-scan
