@@ -15,7 +15,11 @@
 
 (defn bind
   "Returns a config from all the values of `m`, coerced into components,
-   and tagged with the corresponding keys of `m`."
+   and tagged with the corresponding keys of `m`.
+
+   Designed to be used similar to how Guice or Dagger 2 define _modules_,
+   binding implementations to types.  With `bind`, you can bind
+   implementation vars to abstract tags."
   ([m]
    (bind {} m))
   ([config m]
@@ -71,8 +75,10 @@
    a config with all components found in those.
 
    See [[classpath-namespaces]] for required libraries."
-  [prefixes]
-  (from-namespaces (load-namespaces prefixes)))
+  ([prefixes]
+   (from-namespaces (load-namespaces prefixes)))
+  ([config prefixes]
+   (from-namespaces config (load-namespaces prefixes))))
 
 (defn- emit-config [config]
   (let [syms          (->> (vals config)
