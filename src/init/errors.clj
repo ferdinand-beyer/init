@@ -24,10 +24,12 @@
             :name   name
             :source source}))
 
-(defn duplicate-component-exception [k]
-  (ex-info (str "Duplicate component: " k)
-           {:reason ::duplicate-component
-            :name   k}))
+(defn duplicate-component-exception [config component]
+  (ex-info (str "Duplicate component: " (:name component))
+           {:reason    ::duplicate-component
+            :config    config
+            :name      (:name component)
+            :component component}))
 
 (defn unsatisfied-dependency-exception [config component selector]
   (ex-info (str "Unsatisfied dependency: No component found providing " selector

@@ -1,6 +1,32 @@
 (ns init.discovery
   (:require [clojure.string :as str]
+            [init.config :as config]
+            [init.component :as component]
             [init.meta :as meta]))
+
+(defn from-namespaces
+  "Builds a configuration from the given namespaces."
+  ([namespaces]
+   (from-namespaces {} namespaces))
+  ([config namespaces]
+   (reduce #(config/merge-configs %1 (meta/namespace-config %2))
+           config
+           namespaces)))
+
+(defn load-namespaces
+  [syms]
+  (zipmap syms (map #(do (require %1) (the-ns %1)) syms)))
+
+(defn bind
+  "Returns a config from all the values of `m`, coerced into components,
+   and tagged with the corresponding keys of `m`."
+  ([m]
+   (bind {} m))
+  ([config m]
+   (reduce-kv #(config/add-component %1 (-> (component/component %3)
+                                            (component/tag %2)))
+              config
+              m)))
 
 (defn- ns-prefix-pred
   "Returns a predicate that matches namespace names (ie. symbols) by prefix."
@@ -17,6 +43,7 @@
   [prefix]
   (filter (comp (ns-prefix-pred prefix) ns-name) (all-ns)))
 
+;; TODO: Name: Returns a config.
 (defn find-components
   "Searches loaded namespaces for components."
   ([]

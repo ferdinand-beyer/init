@@ -101,7 +101,7 @@
 (defn- hook? [var]
   (contains? (meta var) :init/stops))
 
-;; TODO: Take options to e.g. only consider explicitly tagged vars?
+;; 🤷 We could extend this to include *all* startable vars, not only tagged ones.
 (defn namespace-config
   "Returns a config map with all components defined in `ns`."
   [ns]

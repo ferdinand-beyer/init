@@ -13,10 +13,17 @@
   (let [component (component/component component)
         name      (:name component)]
     (when (and (not replace?) (contains? config name))
-      (throw (errors/duplicate-component-exception name)))
+      (throw (errors/duplicate-component-exception config component)))
     (assoc config name component)))
 
-;; TODO: Add merge-configs
+(defn merge-configs
+  "Merges `configs`."
+  [& configs]
+  (apply merge-with
+         (fn [component _]
+           ;; 🤔 check for equality before throwing?
+           (throw (errors/duplicate-component-exception nil component)))
+         configs))
 
 (defn select
   "Returns a sequence of map entries from `config` with all components

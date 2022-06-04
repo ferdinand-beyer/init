@@ -4,7 +4,7 @@
 (defrecord Component [name start-fn])
 
 (defprotocol AsComponent
-  (component [x]))
+  (component [x] "Coerces `x` to component."))
 
 (extend-protocol AsComponent
   Component
@@ -29,6 +29,11 @@
     (if (coll? selector)
       (every? matches? selector)
       (matches? selector))))
+
+(defn tag
+  "Returns an updated component that provides `tag`."
+  [component tag]
+  (update component :tags (fnil conj #{}) tag))
 
 (defn start [component inputs]
   {:pre [(:start-fn component)
