@@ -7,7 +7,7 @@
   (:require [clojure.repl :refer :all]
             [clojure.tools.namespace.repl :as tools-ns :refer [clear refresh refresh-all]]
             [init.discovery :as discovery]
-            [init.system :as system]))
+            [init.core :as init]))
 
 (def system nil)
 
@@ -18,13 +18,13 @@
   (alter-var-root #'system
                   (fn [_]
                     (-> (discover)
-                        (system/start))))
+                        (init/start))))
   (prn :started (keys system))
   :ok)
 
 (defn stop []
   (prn :stopping (keys system))
-  (alter-var-root #'system (fn [s] (some-> s system/stop)))
+  (alter-var-root #'system (fn [s] (some-> s init/stop)))
   :ok)
 
 (defn reset []

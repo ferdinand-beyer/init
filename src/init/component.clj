@@ -35,12 +35,17 @@
   [component tag]
   (update component :tags (fnil conj #{}) tag))
 
-(defn start [component inputs]
+(defn start
+  "Starts `component` with resolved dependencies as `input`, and returns an
+   instance value."
+  [component inputs]
   {:pre [(:start-fn component)
          (= (count inputs) (count (:deps component)))]}
   ((:start-fn component) inputs))
 
 ;; TODO: Support values with stop semantics, e.g. AutoCloseable
-(defn stop [component value]
+(defn stop
+  "Stops the instance `value` of the `component`."
+  [component value]
   (when-let [stop-fn (:stop-fn component)]
     (stop-fn value)))

@@ -1,4 +1,4 @@
-(ns init.specs
+(ns ^:no-doc init.specs
   (:require [clojure.spec.alpha :as s]))
 
 (s/def ::name qualified-ident?)

@@ -1,9 +1,9 @@
 (ns todo-app.main
   (:gen-class)
-  (:require [init.discovery :as discovery]
-            [init.system :as system]))
+  (:require [init.core :as init]
+            [init.discovery :as discovery]))
 
 (def config (discovery/static-scan '[todo-app]))
 
 (defn -main []
-  (system/start config))
+  (init/start config))
