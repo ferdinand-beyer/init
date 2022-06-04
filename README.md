@@ -1,8 +1,8 @@
 # init
 
 [![Build Status](https://img.shields.io/github/workflow/status/ferdinand-beyer/init/Main.svg)](https://github.com/ferdinand-beyer/init/actions)
-[![cljdoc](https://cljdoc.org/badge/ferdinand-beyer/init)][cljdoc]
-[![Clojars](https://img.shields.io/clojars/v/ferdinand-beyer/init.svg)][clojars]
+[![cljdoc](https://cljdoc.org/badge/com.fbeyer/init)][cljdoc]
+[![Clojars](https://img.shields.io/clojars/v/com.fbeyer/init.svg)][clojars]
 
 _Dependency injection a la carte._
 
