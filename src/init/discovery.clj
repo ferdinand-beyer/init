@@ -49,6 +49,8 @@
   [prefixes]
   (filter (comp (some-prefix-pred prefixes) ns-name) (all-ns)))
 
+;;;; CLASSPATH SCANNING
+
 (defn classpath-namespaces
   "Returns a set of symbols of all namespaces on the classpath.  When
    `prefixes` are given, only returns namespaces starting with one of the
@@ -105,3 +107,21 @@
    have it as a runtime dependency."
   [prefixes]
   (-> (eval prefixes) scan emit-config))
+
+;;;; SERVICE REGISTRY
+
+(defn services
+  "Builds a configuration map from namespaces configured in
+   `META-INF/services/init.namespaces` files on the classpath.  The format
+   of these files is the same as defined by `java.util.ServiceLoader`.
+
+   The default filename `init.namespaces` can be overridden with `name`.
+
+   Requires `com.fbeyer/autoload` on the classpath."
+  ([]
+   (services "init.namespaces"))
+  ([name]
+   (let [services   (requiring-resolve 'com.fbeyer.autoload/services)
+         namespaces (set (services name))]
+     (run! require namespaces)
+     (from-namespaces namespaces))))
