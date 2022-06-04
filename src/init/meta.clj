@@ -45,29 +45,39 @@
     (inject/producer (-> var meta :init/inject) var)
     [(fn [_] (var-get var)) nil]))
 
+(defn- stop-fn [var hook-vars]
+  (let [stop-ref (-> var meta :init/stop-fn)
+        stop-var (:stop hook-vars)]
+    ;; TODO: Throw when both are defined?
+    (if stop-ref
+      (resolve-hook var stop-ref)
+      stop-var)))
+
 ;; TODO: Check arity (w/ warning)?
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn component
-  "Returns a component representing `var`.  Will not include information
-   provided by other vars, such as `:init/stops`."
-  [var]
-  (let [[start-fn deps] (producer var)
-        tags    (var-tags var)
-        stop-fn (when-let [ref (-> var meta :init/stop-fn)]
-                  (resolve-hook var ref))]
-    (-> {:var      var
-         :name     (component-name var)
-         :start-fn start-fn}
-        (cond->
-         tags    (assoc :tags tags)
-         deps    (assoc :deps deps)
-         stop-fn (assoc :stop-fn stop-fn))
-        component/component)))
+  "Returns a component representing `var`."
+  ([var]
+   (component var nil))
+  ([var hook-vars]
+   (let [[start-fn deps] (producer var)
+         tags    (var-tags var)
+         stop-fn (stop-fn var hook-vars)]
+     (-> {:var      var
+          :name     (component-name var)
+          :start-fn start-fn}
+         (cond->
+          tags      (assoc :tags tags)
+          deps      (assoc :deps deps)
+          stop-fn   (assoc :stop-fn stop-fn)
+          hook-vars (assoc :hook-vars hook-vars))
+         component/component))))
 
 (extend-protocol component/AsComponent
   clojure.lang.Var
   (component [var] (component var)))
 
+;; TODO: "startable?"
 ;; TODO: Better story on how to add non-tagged vars
 (defn- implicit? [var]
   (and (not (private? var))
@@ -85,6 +95,11 @@
     (var? ref) (component-name ref)
     (symbol? ref) (some-> (ns-resolve (-> var meta :ns) ref) component-name)))
 
+(defn- with-stop-var [component var]
+  (-> component
+      (assoc :stop-fn var)
+      (assoc-in [:hook-vars :stop] var)))
+
 ;; TODO: Validate: Check for unary?
 ;; TODO: Validate: No stop-fn defined yet
 ;; TODO: Validate: Var is not a component (component-keys)
@@ -92,7 +107,7 @@
   (let [stops (-> var meta :init/stops)
         name  (resolve-component-name var stops)]
     (if-let [component (some-> name config)]
-      (config/add-component config (assoc component :stop-fn var) :replace? true)
+      (config/add-component config (with-stop-var component var) :replace? true)
       (throw (errors/component-not-found-exception config (or name stops) var)))))
 
 ;; Functions providing lifecycle handlers for existing components,

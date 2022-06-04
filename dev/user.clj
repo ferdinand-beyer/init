@@ -12,7 +12,7 @@
 (def system nil)
 
 (defn discover []
-  (discovery/load-components 'todo-app))
+  (discovery/scan ['todo-app]))
 
 (defn start []
   (alter-var-root #'system
