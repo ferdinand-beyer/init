@@ -1,11 +1,12 @@
 {:paths ["src" "resources"]
  :deps {com.fbeyer/init {:local/root "../.."}
 
-        ;; For classpath scanning
-        org.clojure/tools.namespace {:mvn/version "1.3.0"}
-
         aero/aero {:mvn/version "1.1.6"}
         http-kit/http-kit {:mvn/version "2.5.3"}
         metosin/reitit-core {:mvn/version "0.5.18"}
         metosin/reitit-ring {:mvn/version "0.5.18"}
-        ring/ring-defaults {:mvn/version "0.3.3"}}}
+        ring/ring-defaults {:mvn/version "0.3.3"}}
+
+ :aliases {:compile {:extra-deps {org.clojure/tools.namespace {:mvn/version "1.3.0"}}}
+           :build {:deps {io.github.clojure/tools.build {:git/tag "v0.8.2" :git/sha "ba1a2bf"}}
+                   :ns-default build}}}
