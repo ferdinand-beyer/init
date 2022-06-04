@@ -15,3 +15,8 @@
    (stop system (keys system)))
   ([system selectors]
    (system/stop system selectors)))
+
+(defn stop-on-shutdown
+  "Registers a shutdown hook that will stop the `system`."
+  [system]
+  (.addShutdownHook (Runtime/getRuntime) (Thread. #(stop system))))

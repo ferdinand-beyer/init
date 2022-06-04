@@ -48,7 +48,7 @@
   (filter (comp (some-prefix-pred prefixes) ns-name) (all-ns)))
 
 (defn classpath-namespaces
-  "Returns a sequence of symbols of all namespaces on the classpath.  When
+  "Returns a set of symbols of all namespaces on the classpath.  When
    `prefixes` are given, only returns namespaces starting with one of the
    prefixes.
 
@@ -57,7 +57,7 @@
   ([]
    (let [classpath       (requiring-resolve 'clojure.java.classpath/classpath)
          find-namespaces (requiring-resolve 'clojure.tools.namespace.find/find-namespaces)]
-     (find-namespaces (classpath))))
+     (set (find-namespaces (classpath)))))
   ([prefixes]
    (filter (some-prefix-pred prefixes) (classpath-namespaces))))
 
