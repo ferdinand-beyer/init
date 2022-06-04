@@ -10,4 +10,4 @@
          doc   {:doc  "Builds the docs"
                 :task (clojure "-X:codox")}
          tag   {:doc  "Creates a git tag from the current commit"
-                :task (clojute "-T:build tag")}}}
+                :task (clojure "-T:build tag")}}}
