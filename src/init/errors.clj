@@ -53,3 +53,18 @@
            {:reason ::circular-dependency
             :config config
             :keys #{key1 key2}}))
+
+(defn start-failed-exception [component cause]
+  (ex-info (str "Component " (:name component) " failed to start: "
+                (ex-message cause))
+           {:reason    ::start-failed
+            :component component}
+           cause))
+
+(defn stop-failed-exception [component value cause]
+  (ex-info (str "Component " (:name component) " failed to stop: "
+                (ex-message cause))
+           {:reason    ::stop-failed
+            :component component
+            :value     value}
+           cause))

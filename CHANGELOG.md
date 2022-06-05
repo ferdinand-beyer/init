@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 - Recognise type hints as tags
+- Wrap exceptions thrown on component start and stop
+- Stop partially started system on exception
 
 ## [0.1.67] (2022-06-04)
 
