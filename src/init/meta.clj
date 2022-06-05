@@ -9,17 +9,11 @@
 (def ^:private component-keys
   #{:init/name :init/tags :init/inject :init/stop-fn})
 
-(defn- private? [var]
-  (-> var meta :private))
-
 (defn- tagged? [var]
   (->> var meta keys (some component-keys)))
 
 (defn- fn-var? [var]
   (-> var meta :arglists))
-
-(defn- nullary? [var]
-  (->> var meta :arglists (not-every? seq)))
 
 (defn component-name
   "Returns the component name of `var`."
@@ -60,7 +54,6 @@
       (resolve-hook var stop-ref)
       stop-var)))
 
-;; TODO: Check arity (w/ warning)?
 ;; TODO: Think about reloading.  We pass the var here instead of the fn val, is that what we want?
 (defn component
   "Returns a component representing `var`."
@@ -84,13 +77,6 @@
   clojure.lang.Var
   (component [var] (component var)))
 
-;; TODO: "startable?"
-;; TODO: Better story on how to add non-tagged vars
-(defn- implicit? [var]
-  (and (not (private? var))
-       (or (not (fn-var? var))
-           (nullary? var))))
-
 (defn- register-component [config var]
   (if (tagged? var)
     (config/add-component config (component var))
@@ -102,13 +88,12 @@
     (var? ref) (component-name ref)
     (symbol? ref) (some-> (ns-resolve (-> var meta :ns) ref) component-name)))
 
+;; TODO: Validate: No stop-fn defined yet
 (defn- with-stop-var [component var]
   (-> component
       (assoc :stop-fn var)
       (assoc-in [:hook-vars :stop] var)))
 
-;; TODO: Validate: Check for unary?
-;; TODO: Validate: No stop-fn defined yet
 ;; TODO: Validate: Var is not a component (component-keys)
 (defn- register-hook [config var]
   (let [stops (-> var meta :init/stops)
@@ -117,9 +102,6 @@
       (config/add-component config (with-stop-var component var) :replace? true)
       (throw (errors/component-not-found-exception config (or name stops) var)))))
 
-;; Functions providing lifecycle handlers for existing components,
-;; e.g. stop, maybe suspend, resume, ...
-;; TODO: "amend"? "decorators"?
 (defn- hook? [var]
   (contains? (meta var) :init/stops))
 
