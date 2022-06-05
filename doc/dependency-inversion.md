@@ -71,8 +71,8 @@ With Init, the example above can be written like this:
   (resp/response (query-status db)))
 
 (defn start-server
-  {:init/inject [::handler {:port [:get ::config :port]}]}
-  [port]
+  {:init/inject [::handler [:get ::config :port]]}
+  [handler port]
   (jetty/run-jetty handler {:port port}))
 
 (defn -main []

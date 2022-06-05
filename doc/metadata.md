@@ -1,7 +1,11 @@
 # Metadata
 
-Configuration using metadata on vars.  All metadata uses keyword keys with
-the `init` namespace.
+You can configure components using metadata on vars:
+
+* [`:init/name`](#name)
+* [`:init/tags`](#tags)
+* [`:init/inject`](#injecting-dependencies)
+* [`:init/stop-fn`](#stop-functions), [`:init/stops`](#stop-functions)
 
 If you prefer, check out Init's specs in the `init.specs` namespace.
 
@@ -16,7 +20,7 @@ arguments when starting the component.
 
 ### Name
 
-The default component name is the qualified var name, coerced into a keyword.
+The default component name is the qualified var name, converted to keyword.
 
 ```clojure
 (defn my-component [])
@@ -201,20 +205,32 @@ There are two ways to do so: `:init/stop-fn` defines a function directly on the
 component var, and `:init/stops` declares that the var having this metadata is
 the stop function for an existing component.
 
-The `:init/stop-fn` key supports:
+```clojure
+(declare stop-server)
 
-* Functions, e.g. declared inline or by resolving to a var in the same namespace
-* Symbols, resolving to function-valued vars in the same namespace
+(defn start-server
+  {:init/stop-fn #'stop-server}
+  []
+  (server/start))
+
+(defn stop-server [server]
+  (server/stop server))
+```
+
+You can specify the function as:
+
+* Function, e.g. declared inline or by resolving to a var in the same namespace
+* Symbol, resolving to function-valued vars in the same namespace
 * Var, having the stop function as value
 
 The `:init/stops` key must be a keyword, symbol or var referencing an existing
 component:
 
 ```clojure
-(def ^:init/name start-server []
+(defn ^:init/name start-server []
   (server/start))
 
-(def stop-server
+(defn stop-server
   {:init/stops #'start-server}
   [server]
   (server/stop server))
