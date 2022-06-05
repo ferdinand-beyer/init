@@ -10,15 +10,17 @@ and similar to [Component][component], but also draws ideas from popular
 Java projects like [Dagger 2][dagger], [Guice][guice], [Spring][spring]
 and [CDI][cdi].
 
-* Configuration as data
-* Vars are components
-* Configuration via metadata
-* Runtime and compile-time classpath scanning
-* Component selection via tags
-* Supports Clojure hierarchies for tags
-* Start and stop components in dependency order
-* Small footprint
-* Modular design, pick what you need
+* [Configuration as data](./doc/README.md#configuration-as-data)
+* [Vars are components](./doc/README.md#vars-are-components)
+* Configuration via [metadata](./doc/README.md#configuration-via-metadata)
+* [Declarative injection specification](./doc/README.md#declarative-injection-mini-language)
+* Runtime and compile-time [classpath scanning](./doc/README.md#classpath-scanning)
+* Component selection via [tags](./doc/README.md#component-selection-via-tags)
+* [Tag hierarchy](./doc/README.md#tag-hierarchy)
+* [Start and stop components](./doc/README.md#start-and-stop-components-in-dependency-order)
+  in dependency order
+* [Small footprint](./doc/README.md#small-footprint)
+* [Modular design](./doc/README.md#modular-design), pick what you need
 
 **Status**: Alpha.  The concepts should be pretty stable, but API details might
 still change.
@@ -102,6 +104,7 @@ Leiningen/Boot:
 
 * [Articles and API Docs][cljdoc] are hosted on **cljdoc**
 * [Example projects](./examples/)
+* [Changelog](./CHANGELOG.md)
 * You can also browse the [`doc/`](./doc/) folder
 
 ## License
