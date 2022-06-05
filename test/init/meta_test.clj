@@ -20,6 +20,17 @@
   []
   ::provides)
 
+(defn argvec-hinted-component
+  {:init/tags [::argvec-hinted]}
+  ^String []
+  "A string")
+
+#_{:clj-kondo/ignore [:non-arg-vec-return-type-hint]}
+(defn ^String name-hinted-component
+  {:init/tags [::name-hinted]}
+  []
+  "A string")
+
 (def ^:init/name const-component ::const)
 
 (defn producer-component
@@ -60,7 +71,9 @@
 
   (testing "provided tags"
     (is (empty? (:tags (meta/component #'simple-component))))
-    (is (= #{::extra} (:tags (meta/component #'providing-component)))))
+    (is (= #{::extra} (:tags (meta/component #'providing-component))))
+    (is (= #{String ::name-hinted} (:tags (meta/component #'name-hinted-component))))
+    (is (= #{String ::argvec-hinted} (:tags (meta/component #'argvec-hinted-component)))))
 
   (testing "constant component"
     (let [c (meta/component #'const-component)]

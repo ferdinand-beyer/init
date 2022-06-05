@@ -52,6 +52,9 @@ Additional tags can be specified with the `:init/tags` metadata:
   (httpkit/run-server handler))
 ```
 
+Init also treats [type hints](https://clojure.org/reference/java_interop#typehints)
+as tags, so that you can inject components by Java type.
+
 ### Injection Points
 
 You can specify selectors for components to inject via the `:init/inject`

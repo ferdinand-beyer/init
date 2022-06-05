@@ -30,8 +30,15 @@
       (keyword (-> m :ns ns-name name) (-> m :name name))
       k)))
 
+(defn- type-hints [var-meta]
+  (->> (map (comp eval :tag meta) (:arglists var-meta))
+       (cons (:tag var-meta))))
+
 (defn- var-tags [var]
-  (-> var meta :init/tags set))
+  (let [m (meta var)]
+    (->> (concat (type-hints m) (:init/tags m))
+         (remove nil?)
+         (into #{}))))
 
 (defn- resolve-hook [var ref]
   ;; TODO: Just conform the spec?
@@ -61,8 +68,8 @@
    (component var nil))
   ([var hook-vars]
    (let [[start-fn deps] (producer var)
-         tags    (var-tags var)
-         stop-fn (stop-fn var hook-vars)]
+         tags            (var-tags var)
+         stop-fn         (stop-fn var hook-vars)]
      (-> {:var      var
           :name     (component-name var)
           :start-fn start-fn}
