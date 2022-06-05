@@ -31,6 +31,14 @@
           :tag        (or tagged "HEAD")
           :url        repo-url})
 
+(defn- next-tag []
+  (format "v%s.%s" base-version (b/git-count-revs nil)))
+
+(defn info [_]
+  (println "Name:    " lib)
+  (println "Version: " version)
+  (println "Next tag:" (next-tag)))
+
 (defn tag [_]
   (let [tag (format "v%s.%s" base-version (b/git-count-revs nil))]
     (git "tag" tag)
