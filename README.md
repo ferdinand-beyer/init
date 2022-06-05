@@ -10,6 +10,16 @@ and similar to [Component][component], but also draws ideas from popular
 Java projects like [Dagger 2][dagger], [Guice][guice], [Spring][spring]
 and [CDI][cdi].
 
+* Configuration as data
+* Vars are components
+* Configuration via metadata
+* Runtime and compile-time classpath scanning
+* Component selection via tags
+* Supports Clojure hierarchies for tags
+* Start and stop components in dependency order
+* Small footprint
+* Modular design, pick what you need
+
 **Status**: Alpha.  The concepts should be pretty stable, but API details might
 still change.
 
@@ -74,8 +84,19 @@ Have a look at [Init's concepts](./doc/concepts.md) to find out more.
 
 ## Installation
 
-Releases are available from [Clojars][clojars].  
-See the Clojars page for tool-specific instructions.
+Releases are available from [Clojars][clojars].
+
+deps.edn:
+
+```
+com.fbeyer/init {:mvn/version "0.1.67"}
+```
+
+Leiningen/Boot:
+
+```
+[com.fbeyer/init "0.1.67"]
+```
 
 ## Documentation
 
