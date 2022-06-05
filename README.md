@@ -4,56 +4,39 @@
 [![cljdoc](https://cljdoc.org/badge/com.fbeyer/init)][cljdoc]
 [![Clojars](https://img.shields.io/clojars/v/com.fbeyer/init.svg)][clojars]
 
-_Dependency injection a la carte._
+Init is a small Clojure framework for **application initialization** and
+**dependency injection**.  It is heavily inspired by [Integrant][integrant]
+and similar to [Component][component], but also draws ideas from popular
+Java projects like [Dagger 2][dagger], [Guice][guice], [Spring][spring]
+and [CDI][cdi].
 
-Init is a small Clojure framework for application state management and dependency
-injection.  It is heavily inspired by [Integrant][integrant] and similar to
-[Component][component], but also draws ideas from Java frameworks like
-[Dagger 2][dagger], [Guice][guice], [Spring][spring] and [CDI][cdi].
-
-**STATUS**: Alpha.  API might still change.
+**Status**: Alpha.  The concepts should be pretty stable, but API details might
+still change.
 
 ## Rationale
 
-Similar to Integrant being a reaction on perceived weaknesses with Component,
-Init is a reaction on perceived weaknesses with Integrant.
+I developed Init because I was unhappy with available solutions in Clojure.
 
-In Integrant, systems are built from a configuration map that is usually read
-from an EDN file.  Then the keys in the configuration have to be mapped to
-code, which requires loading namespaces that define multimethods.  This design
-has its challenges:
+* [Component][component] relies on records and protocols, and has some
+  constraints on what can have dependencies.
+* [Mount][mount] encourages global state with hidden dependencies, and does not
+  support dependency _inversion_ at all.
+* [Integrant][integrant] separates configuration from implementation, which
+  sounds like a good idea at first, but adds complexity in practice.
 
-* In order for Integrant to help with namespace loading, the configuration keys
-  have to match namespaces in the code.
-* Providing multimethod implementations either leads to a lot of repetitive
-  "glue code", or couples your application with Integrant.
-* The configuration and implementation need to grow in parallel, but because
-  they are separated, it is easy to forget one or the other.
+Init borrows many ideas from Integrant, such as configuration as data, keys
+that support hierarchy, system maps, while offering an alternative to derive
+configuration from code via metadata.
 
 In the Java community, there has been a clear transition from file based
 configuration (like early Spring's XML configuration) towards annotation-based
-configuration, directly in code.
+configuration, directly in code.  Init suggests that this has proven useful,
+and offers a similar programming experience to Clojure programmers.
 
-Init aims at providing the same annotation based experience to Clojure
-programmers, using Clojure's powerful metadata capabilities, while staying
-simple, data-driven, and transparent.
+## Usage
 
-However, one solution does not fit all.  Therefore one of the fundamental goals
-of Init is modularity, allowing users to mix and match techniques.
-
-## Installation
-
-Releases are available from [Clojars][clojars].  
-See the Clojars page for tool-specific instructions.
-
-## Documentation
-
-* [API Docs][cljdoc]
-* [Example project](./examples/todo-app/)
-
-## Motivating example
-
-Defining dependencies via metadata:
+Init allows you to define components and their dependencies using Metadata on
+vars, and provides a mini-language to customize injected values:
 
 ```clojure
 (defn read-config
@@ -78,14 +61,32 @@ Defining dependencies via metadata:
 
 (defn -main []
   (-> (discovery/from-namespaces [*ns*])
-      (init/start)))
+      (init/start)
+      (init/stop-on-shutdown)))
 ```
+
+While [configuration via metadata](./doc/metadata.md) is preferred and
+distinguishes Init from other solutions, it is completely optional.
+Init has a modular design, and allows you to mix and match different
+approaches for configuration, discovery and component lifecycle.
+
+Have a look at [Init's concepts](./doc/concepts.md) to find out more.
+
+## Installation
+
+Releases are available from [Clojars][clojars].  
+See the Clojars page for tool-specific instructions.
+
+## Documentation
+
+* [Articles and API Docs][cljdoc] are hosted on **cljdoc**
+* [Example projects](./examples/)
+* You can also browse the [`doc/`](./doc/) folder
 
 ## License
 
 Distributed under the [MIT License].  
 Copyright &copy; 2022 [Ferdinand Beyer]
-
 
 [cdi]: https://www.cdi-spec.org/
 [cljdoc]: https://cljdoc.org/jump/release/com.fbeyer/init
