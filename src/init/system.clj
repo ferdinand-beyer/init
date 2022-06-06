@@ -19,8 +19,8 @@
   ([system graph selectors]
    (stop-system system graph selectors nil))
   ([system graph selectors exception]
-   (reduce (fn [ex k]
-             (stop-component (graph/get-component graph k) (system k) ex))
+   (reduce (fn [ex [k c]]
+             (stop-component c (system k) ex))
            exception
            (graph/reverse-dependency-order graph selectors))))
 
@@ -43,7 +43,8 @@
 (defn start
   "Starts a system from a dependency graph."
   [graph selectors]
-  (-> (reduce #(start-component %1 graph %2 (graph/get-component graph %2))
+  (-> (reduce (fn [system [k c]]
+                (start-component system graph k c))
               {}
               (graph/dependency-order graph selectors))
       (with-meta {::graph graph})))

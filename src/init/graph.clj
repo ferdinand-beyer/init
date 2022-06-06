@@ -1,8 +1,8 @@
 (ns init.graph
   (:require [clojure.set :as set]
+            [com.stuartsierra.dependency :as dep]
             [init.config :as config]
-            [init.errors :as errors]
-            [weavejester.dependency :as dep]))
+            [init.errors :as errors]))
 
 (defn- translate-exception [config ex]
   (let [ex-data (ex-data ex)]
@@ -12,11 +12,9 @@
 
 (defn- build-graph [config resolved]
   (try
-    (reduce-kv (fn [graph name deps]
-                 (transduce cat
-                            (completing #(dep/depend %1 name %2))
-                            graph
-                            deps))
+    (transduce (mapcat (fn [[k deps]]
+                         (map #(vector k %) (flatten deps))))
+               (completing (partial apply dep/depend))
                (dep/graph)
                resolved)
     (catch Exception ex
@@ -25,26 +23,19 @@
 (defn dependency-graph
   "Builds a dependency graph on the keys in `config`."
   [config]
-  (let [resolved (config/resolve-config config)
-        graph    (build-graph config resolved)]
-    {:graph graph
-     :config config
-     ;; We only keep `resolved` around as the graph does not preserve order.
-     :resolved resolved}))
-
-(defn get-component
-  "Returns a component by name."
-  [graph name]
-  (-> graph :config name))
+  (let [resolved  (config/resolve-config config)
+        graph     (build-graph config resolved)
+        key-order (dep/topo-sort graph)]
+    (assoc graph
+           ::config    config
+           ::resolved  resolved
+           ::key-order key-order)))
 
 (defn required-keys
   "Returns resolved dependencies of the component with the given `key`, as
    a sequence of sequences, in the declared order."
   [graph key]
-  (-> graph :resolved (get key)))
-
-(defn- key-comparator [graph]
-  (dep/topo-comparator #(compare (str %1) (str %2)) graph))
+  (-> graph ::resolved (get key)))
 
 (defn- select-keyset
   "Returns the set of config keys that match `selectors`."
@@ -55,29 +46,28 @@
   [graph transitive-fn keyset]
   (set/union keyset (transitive-fn graph keyset)))
 
-(defn- sort-keys
-  [graph keys]
-  (sort (key-comparator graph) keys))
+(defn- entries [m keys]
+  (map #(find m %) keys))
 
-(defn- ordered-keys
-  ([{:keys [graph config]}]
-   (sort-keys graph (keys config)))
-  ([{:keys [graph config]} selectors transitive-fn]
-   (->> selectors
-        (select-keyset config)
-        (expand-keyset graph transitive-fn)
-        (sort-keys graph))))
+(defn- ordered-entries
+  [{::keys [config key-order] :as graph} selectors transitive-fn]
+  (if (= (keys config) selectors)
+    (entries config key-order)
+    (->> (keep (->> (select-keyset config selectors)
+                    (expand-keyset graph transitive-fn))
+               key-order)
+         (entries config))))
 
 (defn dependency-order
-  "Returns keys of components satisfying `selectors` in dependency order."
+  "Returns config entries providing `selectors` in dependency order."
   ([graph]
-   (ordered-keys graph))
+   (entries (::config graph) (::key-order graph)))
   ([graph selectors]
-   (ordered-keys graph selectors dep/transitive-dependencies-set)))
+   (ordered-entries graph selectors dep/transitive-dependencies-set)))
 
 (defn reverse-dependency-order
-  "Returns keys of components satisfying `selectors` in reverse dependency order."
+  "Returns config entries providing `selectors` in reverse dependency order."
   ([graph]
-   (reverse (ordered-keys graph)))
+   (reverse (dependency-order graph)))
   ([graph selectors]
-   (reverse (ordered-keys graph selectors dep/transitive-dependents-set))))
+   (reverse (ordered-entries graph selectors dep/transitive-dependents-set))))

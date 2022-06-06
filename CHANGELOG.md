@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+Rework in `init.graph`:
+
+- Compute dependency order once and reuse it
+- **Breaking**: Use `com.stuartsierra/dependency` instead of `weavejester/dependency`
+- **Breaking**: `init.graph/get-component` is gone
+- **Breaking**: `init.graph/[reverse]-dependency-order` returns entries instead of keys
+
 ## [0.1.77] (2022-06-05)
 
 - Recognise type hints as tags

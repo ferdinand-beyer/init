@@ -170,7 +170,7 @@ dependency order, making sure all resources are released properly.
 ## Small footprint
 
 Init is a fairly small library and has very few dependencies.  At the moment,
-it only requires [`weavejester/dependency`][dependency-lib].
+it only requires [`com.stuartsierra/dependency`][dependency-lib].
 
 Other dependency are optional and users will need to provide them when they
 want to use their functionality:
@@ -191,5 +191,5 @@ Init is modular in design:
   for Integrant.
 
 [autoload]: https://github.com/ferdinand-beyer/autoload
-[dependency-lib]: https://github.com/weavejester/dependency
+[dependency-lib]: https://github.com/stuartsierra/dependency
 [tools-ns]: https://github.com/clojure/tools.namespace

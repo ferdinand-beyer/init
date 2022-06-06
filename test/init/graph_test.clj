@@ -1,10 +1,10 @@
 (ns init.graph-test
   (:require [clojure.test :refer [deftest is testing]]
-            [init.graph :as graph]
+            [com.stuartsierra.dependency :as dep]
             [init.errors :as errors]
+            [init.graph :as graph]
             [init.test-support.helpers :refer [ex-info? thrown]]
-            [init.test-support.test-config :as tc :refer [make-config]]
-            [weavejester.dependency :as dep]))
+            [init.test-support.test-config :as tc :refer [make-config]]))
 
 (deftest dependency-graph-test
   (testing "detects unsatisfied dependencies"
@@ -34,26 +34,32 @@
 
   (testing "builds correct graph"
     (let [config (tc/settlers)
-          graph  (:graph (graph/dependency-graph config))]
-      (is (= (set (keys config))
-             (set (dep/nodes graph))))
+          graph  (graph/dependency-graph config)]
+      (is (= (set (keys config)) (set (dep/nodes graph))))
       (is (true? (dep/depends? graph ::tc/blacksmith ::tc/well)))
       (is (false? (dep/depends? graph ::tc/lumberjack ::tc/farm))))))
+
+(defn ordered? [expected actual]
+  (= expected (keep (set expected) actual)))
 
 (deftest dependency-order-test
   (let [graph (graph/dependency-graph (tc/settlers))]
     (is (= [::tc/forester ::tc/lumberjack]
-           (graph/dependency-order graph [::tc/wood])))
+           (keys (graph/dependency-order graph [::tc/wood]))))
     (is (= [::tc/farm ::tc/mill ::tc/well ::tc/bakery ::tc/iron-mine]
-           (graph/dependency-order graph [::tc/iron])))
-    (is (= [::tc/farm ::tc/mill ::tc/well ::tc/bakery ::tc/forester ::tc/iron-mine ::tc/lumberjack ::tc/kiln ::tc/blacksmith]
-           (graph/dependency-order graph)))))
+           (keys (graph/dependency-order graph [::tc/iron]))))
+    (let [order (keys (graph/dependency-order graph))]
+      (is (ordered? [::tc/farm ::tc/mill ::tc/bakery ::tc/iron-mine ::tc/blacksmith] order))
+      (is (ordered? [::tc/well ::tc/bakery] order))
+      (is (ordered? [::tc/forester ::tc/lumberjack ::tc/kiln ::tc/blacksmith] order)))))
 
 (deftest reverse-dependency-order-test
   (let [graph (graph/dependency-graph (tc/settlers))]
     (is (= [::tc/blacksmith ::tc/kiln ::tc/lumberjack]
-           (graph/reverse-dependency-order graph [::tc/wood])))
+           (keys (graph/reverse-dependency-order graph [::tc/wood]))))
     (is (= [::tc/blacksmith ::tc/iron-mine]
-           (graph/reverse-dependency-order graph [::tc/iron])))
-    (is (= [::tc/blacksmith ::tc/kiln ::tc/lumberjack ::tc/iron-mine ::tc/forester ::tc/bakery ::tc/well ::tc/mill ::tc/farm]
-           (graph/reverse-dependency-order graph)))))
+           (keys (graph/reverse-dependency-order graph [::tc/iron]))))
+    (let [order (keys (graph/reverse-dependency-order graph))]
+      (is (ordered? [::tc/blacksmith ::tc/kiln ::tc/lumberjack ::tc/forester] order))
+      (is (ordered? [::tc/blacksmith ::tc/iron-mine ::tc/bakery ::tc/well] order))
+      (is (ordered? [::tc/bakery ::tc/mill ::tc/farm] order)))))
