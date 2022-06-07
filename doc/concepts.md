@@ -1,5 +1,7 @@
 # Concepts
 
+![Overview](concepts.svg)
+
 ## Component
 
 Metadata describing a building block of the software system.
