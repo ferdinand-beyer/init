@@ -180,7 +180,7 @@ want to use their functionality:
 
 ## Modular design
 
-Init is modular in design:
+Init is [modular in design](design.md):
 
 * Configuration is just data, and `init.config` is agnostic to how the
   configuration is built.

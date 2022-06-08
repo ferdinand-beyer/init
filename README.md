@@ -20,7 +20,7 @@ and [CDI][cdi].
 * [Start and stop components](./doc/README.md#start-and-stop-components-in-dependency-order)
   in dependency order
 * [Small footprint](./doc/README.md#small-footprint)
-* [Modular design](./doc/README.md#modular-design), pick what you need
+* [Modular design](./doc/design.md), pick what you need
 
 **Status**: Alpha.  The concepts should be pretty stable, but API details might
 still change.
@@ -37,7 +37,7 @@ I developed Init because I was unhappy with available solutions in Clojure.
   sounds like a good idea at first, but adds complexity in practice.
 
 Init borrows many ideas from Integrant, such as configuration as data, keys
-that support hierarchy, system maps, while offering an alternative to derive
+that support hierarchy, and system maps, while offering an alternative to derive
 configuration from code via metadata.
 
 In the Java community, there has been a clear transition from file based
@@ -79,10 +79,11 @@ vars, and provides a mini-language to customize injected values:
 
 While [configuration via metadata](./doc/metadata.md) is preferred and
 distinguishes Init from other solutions, it is completely optional.
-Init has a modular design, and allows you to mix and match different
-approaches for configuration, discovery and component lifecycle.
+Init has a [modular design](./doc/design.md), and allows you to mix and
+match different approaches for configuration, discovery and component
+lifecycle.
 
-Have a look at [Init's concepts](./doc/concepts.md) to find out more.
+Have a look at [Init's design](./doc/design.md) to find out more.
 
 ## Installation
 

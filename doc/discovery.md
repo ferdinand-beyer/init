@@ -1,6 +1,6 @@
 # Discovery
 
-Init provides multiple flavors of building [configurations](./concepts.md#configuration).
+Init provides multiple flavors of building [configurations](./design.md#configuration).
 
 ## Namespaces
 
