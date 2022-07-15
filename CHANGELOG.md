@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.2.83] (2022-07-15)
+
+- Automatically close `java.lang.AutoCloseable` components
+
 Rework in `init.graph`:
 
 - Compute dependency order once and reuse it
@@ -19,6 +23,7 @@ Rework in `init.graph`:
 
 First public release
 
-[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.1.77...HEAD
+[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.83...HEAD
+[0.2.83]: https://github.com/ferdinand-beyer/init/compare/v0.1.77...v0.2.83
 [0.1.77]: https://github.com/ferdinand-beyer/init/compare/v0.1.67...v0.1.77
 [0.1.67]: https://github.com/ferdinand-beyer/init/releases/tag/v0.1.67
