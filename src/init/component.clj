@@ -43,9 +43,10 @@
          (= (count inputs) (count (:deps component)))]}
   ((:start-fn component) inputs))
 
-;; TODO: Support values with stop semantics, e.g. AutoCloseable
 (defn stop
   "Stops the instance `value` of the `component`."
   [component value]
-  (when-let [stop-fn (:stop-fn component)]
-    (stop-fn value)))
+  (if-let [stop-fn (:stop-fn component)]
+    (stop-fn value)
+    (when (instance? java.lang.AutoCloseable value)
+      (.close ^java.lang.AutoCloseable value))))
