@@ -25,7 +25,7 @@
   [config]
   (let [resolved  (config/resolve-config config)
         graph     (build-graph config resolved)
-        key-order (dep/topo-sort graph)]
+        key-order (sort (dep/topo-comparator graph) (keys config))]
     (assoc graph
            ::config    config
            ::resolved  resolved

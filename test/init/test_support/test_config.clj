@@ -28,7 +28,8 @@
    [::kiln [::charcoal] [::wood]]
    [::lumberjack [::wood] [::tree]]
    [::forester [::tree]]
-   [::blacksmith [:tools] [::iron ::coal]]])
+   [::blacksmith [:tools] [::iron ::coal]]
+   [::hermit]])
 
 (derive ::fish ::food)
 (derive ::bread ::food)

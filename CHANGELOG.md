@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fix: Components without dependencies are not started
+
 ## [0.2.83] (2022-07-15)
 
 - Automatically close `java.lang.AutoCloseable` components
