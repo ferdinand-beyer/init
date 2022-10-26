@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.86] (2022-10-26)
+
 - [#1](https://github.com/ferdinand-beyer/init/issues/1)
   Support vars in `:init/inject`
 - Fix: Components without dependencies are not started
@@ -27,7 +29,8 @@ Rework in `init.graph`:
 
 First public release
 
-[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.83...HEAD
+[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.86...HEAD
+[0.2.86]: https://github.com/ferdinand-beyer/init/compare/v0.1.83...v0.2.86
 [0.2.83]: https://github.com/ferdinand-beyer/init/compare/v0.1.77...v0.2.83
 [0.1.77]: https://github.com/ferdinand-beyer/init/compare/v0.1.67...v0.1.77
 [0.1.67]: https://github.com/ferdinand-beyer/init/releases/tag/v0.1.67
