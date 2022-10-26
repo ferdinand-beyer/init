@@ -95,6 +95,18 @@ a set, by putting the required tags in a set:
   (reitit/router (vec routes)))
 ```
 
+Instead of tags, you can also refer to a component var.  This is equivalent to
+depend on a component with the same name as the referred var, but might give
+a better developer experience as analysis tools will no longer mark component
+vars as unused, and support updating references when refactoring.
+
+```clojure
+(defn root-handler
+  {:init/inject [#'router #'default-handler]}
+  [router]
+  (reitit/ring-handler router default-handler))
+```
+
 #### Injecting maps
 
 You can inject multiple dependencies as a map, using tags as keys:

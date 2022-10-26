@@ -41,9 +41,13 @@
     (var? ref) ref
     (symbol? ref) (ns-resolve (-> var meta :ns) ref)))
 
+(defn- resolve-deps-vars [deps]
+  (mapv #(if (var? %) (component-name %) %) deps))
+
 (defn- producer [var]
   (if (fn-var? var)
-    (inject/producer (-> var meta :init/inject) var)
+    (let [[start-fn deps] (inject/producer (-> var meta :init/inject) var)]
+      [start-fn (resolve-deps-vars deps)])
     [(fn [_] (var-get var)) nil]))
 
 (defn- stop-fn [var hook-vars]

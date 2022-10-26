@@ -98,6 +98,10 @@
   [[_ tags]]
   (set-producer (into #{} (map parse-tag) tags)))
 
+(defmethod parse-dep :var
+  [[_ var]]
+  (unique-producer var))
+
 (defn- parse-keys [tags]
   (let [tags (map parse-tag tags)]
     (map-producer tags (map unique-producer tags))))

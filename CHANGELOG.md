@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- [#1](https://github.com/ferdinand-beyer/init/issues/1)
+  Support vars in `:init/inject`
 - Fix: Components without dependencies are not started
 
 ## [0.2.83] (2022-07-15)

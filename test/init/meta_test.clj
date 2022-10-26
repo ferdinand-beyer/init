@@ -38,6 +38,11 @@
   [const named]
   [:called-with const named])
 
+(defn var-dep-component
+  {:init/inject [#'const-component]}
+  [const]
+  [:called-with const])
+
 (defn partially-injected-component
   {:init/inject [:partial ::const]}
   [injected runtime-arg]
@@ -89,6 +94,12 @@
           deps (:deps c)]
       (is (= [::const ::named] deps))
       (is (= [:called-with :const :named] (component/start c [[:const] [:named]])))))
+
+  (testing "using vars to specify dependencies"
+    (let [c    (meta/component #'var-dep-component)
+          deps (:deps c)]
+      (is (= [::const-component] deps))
+      (is (= [:called-with :const] (component/start c [[:const]])))))
 
   (testing "partial dependency injection"
     (let [c (meta/component #'partially-injected-component)]

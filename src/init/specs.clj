@@ -12,7 +12,8 @@
 (s/def ::dep
   (s/or :tag ::tag
         :seq (s/+ ::tag)
-        :set (s/coll-of ::tag :kind set? :min-count 1)))
+        :set (s/coll-of ::tag :kind set? :min-count 1)
+        :var var?))
 
 (s/def ::deps (s/* ::dep))
 

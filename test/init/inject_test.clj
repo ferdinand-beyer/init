@@ -2,6 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [init.inject :as inject]))
 
+(def var-component nil)
+
 (defn- assert-unique [form]
   (let [[init deps] (inject/value-producer form)]
     (is (= 1 (count deps)))
@@ -26,6 +28,9 @@
   (testing "set of tags"
     (assert-set #{::foo})
     (assert-set #{::foo ::bar}))
+
+  (testing "var"
+    (assert-unique #'var-component))
 
   (testing ":keys form"
     (let [[init deps] (inject/value-producer [:keys ::foo ::bar])]
