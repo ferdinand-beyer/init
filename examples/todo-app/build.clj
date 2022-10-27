@@ -4,7 +4,7 @@
 (def lib 'init/todo-app)
 (def version (format "1.0.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")
-(def basis-opts {:project "deps.edn"})
+(def basis (b/create-basis))
 (def uber-file (format "target/%s-%s-standalone.jar" (name lib) version))
 
 (defn clean [_]
@@ -14,14 +14,7 @@
   (clean nil)
 
   (println "Compiling Clojure code...")
-  ;; Copy only app namespaces, with the :compile alias enabled.
-  (b/compile-clj {:basis (b/create-basis (assoc basis-opts :aliases [:compile]))
-                  :src-dirs ["src"]
-                  :class-dir class-dir
-                  :filter-nses '[todo-app]})
-  ;; Now copy everything, without :compile alias.  Will not recompile app namespaces.
-  (b/compile-clj {:basis (b/create-basis basis-opts)
-                  :src-dirs ["src"]
+  (b/compile-clj {:basis basis
                   :class-dir class-dir})
 
   (println "Copying resources...")
@@ -31,5 +24,5 @@
   (println "Building uberjar...")
   (b/uber {:class-dir class-dir
            :uber-file uber-file
-           :basis (b/create-basis basis-opts)
+           :basis basis
            :main 'todo-app.main}))

@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 
+- Reimplemented classpath scanning without `clojure.tools.namespace`.  
+  Uses a simpler heuristic without reading `ns` macros, and also works
+  with ahead-of-time compiled `<name>__init.class` files.
+- Don't load found namespaces at compile time in `static-scan`, as this often
+  causes runtime errors such as `java.lang.NoSuchFieldError: __thunk__0__`.  
+  Instead, just `require` the namespaces and build the config at runtime using
+  `from-namespaces`.
+
 ## [0.2.86] (2022-10-26)
 
-- [#1](https://github.com/ferdinand-beyer/init/issues/1)
+- [#1](https://github.com/ferdinand-beyer/init/issues/1):
   Support vars in `:init/inject`
 - Fix: Components without dependencies are not started
 

@@ -46,9 +46,6 @@ Finds namespaces on the classpath matching prefixes:
 (def config (discovery/scan '[my-app my-team.lib]))
 ```
 
-This requires [`clojure.tools.namespace`][tools-ns] on the classpath and will
-only detect namespaces that are available as source files.
-
 ### Static scanning
 
 There is a utility to scan the classpath at compile time:
@@ -57,8 +54,8 @@ There is a utility to scan the classpath at compile time:
 (def config (discovery/static-scan '[my-app my-team.lib]))
 ```
 
-This way, you will have no runtime dependencies on `tools.namespace` and it will
-also work with ahead-of-time compiled namespaces.
+This allows for skipping classpath scanning at runtime and ahead-of-time
+compilation of matching namespaces.
 
 ## Service Loader
 

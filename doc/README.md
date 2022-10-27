@@ -108,9 +108,7 @@ define components:
 (defn config (init.discovery/scan ['my-app]))
 ```
 
-You can do so at runtime or at compile time.  In the latter case, your
-application will have very little overhead compare to hand-written code,
-and does not require libraries such as `clojure.tools.namespace`:
+You can do so at runtime or at compile time:
 
 ```clojure
 (defn config (init.discovery/static-scan ['my-app]))
@@ -175,7 +173,6 @@ it only requires [`com.stuartsierra/dependency`][dependency-lib].
 Other dependency are optional and users will need to provide them when they
 want to use their functionality:
 
-* [`org.clojure/tools.namespace`][tools-ns] for classpath scanning
 * [`com.fbeyer/autoload`][autoload] for service-loader style discovery
 
 ## Modular design
@@ -192,4 +189,3 @@ Init is [modular in design](design.md):
 
 [autoload]: https://github.com/ferdinand-beyer/autoload
 [dependency-lib]: https://github.com/stuartsierra/dependency
-[tools-ns]: https://github.com/clojure/tools.namespace
