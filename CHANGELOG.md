@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.90] (2022-10-27)
+
 - Reimplemented classpath scanning without `clojure.tools.namespace`.  
   Uses a simpler heuristic without reading `ns` macros, and also works
   with ahead-of-time compiled `<name>__init.class` files.
@@ -37,8 +39,9 @@ Rework in `init.graph`:
 
 First public release
 
-[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.86...HEAD
-[0.2.86]: https://github.com/ferdinand-beyer/init/compare/v0.1.83...v0.2.86
+[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.90...HEAD
+[0.2.90]: https://github.com/ferdinand-beyer/init/compare/v0.2.86...v0.2.90
+[0.2.86]: https://github.com/ferdinand-beyer/init/compare/v0.2.83...v0.2.86
 [0.2.83]: https://github.com/ferdinand-beyer/init/compare/v0.1.77...v0.2.83
 [0.1.77]: https://github.com/ferdinand-beyer/init/compare/v0.1.67...v0.1.77
 [0.1.67]: https://github.com/ferdinand-beyer/init/releases/tag/v0.1.67
