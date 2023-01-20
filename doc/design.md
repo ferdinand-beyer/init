@@ -91,7 +91,7 @@ mutable or immutable, including `nil`.
 A function returning a component's [instance](#instance), with the help of any
 instances from its [dependencies](#dependency).
 
-Stop functions need to accept a sequence of collections: For every dependency,
+Start functions need to accept a sequence of collections: For every dependency,
 a collection of instances of all matching components.
 
 Init supports building start functions from
