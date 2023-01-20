@@ -1,6 +1,6 @@
 # init
 
-[![Build Status](https://img.shields.io/github/workflow/status/ferdinand-beyer/init/Main.svg)](https://github.com/ferdinand-beyer/init/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ferdinand-beyer/init/main.yml?branch=main)](https://github.com/ferdinand-beyer/init/actions)
 [![cljdoc](https://cljdoc.org/badge/com.fbeyer/init)][cljdoc]
 [![Clojars](https://img.shields.io/clojars/v/com.fbeyer/init.svg)][clojars]
 
