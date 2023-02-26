@@ -1,35 +1,36 @@
 (ns init.graph
   (:require [clojure.set :as set]
-            [com.stuartsierra.dependency :as dep]
+            [init.dag :as dag]
             [init.config :as config]
             [init.errors :as errors]))
 
-(defn- translate-exception [config ex]
-  (let [ex-data (ex-data ex)]
-    (if (= ::dep/circular-dependency (:reason ex-data))
-      (errors/circular-dependency-exception config (:node ex-data) (:dependency ex-data))
-      ex)))
-
-(defn- build-graph [config resolved]
-  (try
-    (transduce (mapcat (fn [[k deps]]
-                         (map #(vector k %) (flatten deps))))
-               (completing (partial apply dep/depend))
-               (dep/graph)
-               resolved)
-    (catch Exception ex
-      (throw (translate-exception config ex)))))
+(defn- make-dag [resolved]
+  (transduce (mapcat (fn [[k deps]]
+                       (for [keys deps
+                             d    keys]
+                         [k d])))
+             (fn
+               ([dag] dag)
+               ([dag [k d]] (dag/add-edge dag k d)))
+             dag/empty-dag
+             resolved))
 
 (defn dependency-graph
   "Builds a dependency graph on the keys in `config`."
   [config]
-  (let [resolved  (config/resolve-config config)
-        graph     (build-graph config resolved)
-        key-order (sort (dep/topo-comparator graph) (keys config))]
-    (assoc graph
-           ::config    config
-           ::resolved  resolved
-           ::key-order key-order)))
+  (let [resolved   (config/resolve-config config)
+        dag        (make-dag resolved)
+        comparator (try
+                     (dag/topo-comparator dag)
+                     (catch clojure.lang.ExceptionInfo e
+                       (let [cycle (first (:cycles (ex-data e)))]
+                         ;; TODO: Report all cycles?
+                         (throw (errors/circular-dependency-exception config (first cycle) (second cycle))))))
+        key-order  (sort comparator (keys config))]
+    {::dag dag
+     ::config config
+     ::resolved resolved
+     ::key-order key-order}))
 
 (defn required-keys
   "Returns resolved dependencies of the component with the given `key`, as
@@ -43,18 +44,18 @@
   (into #{} (mapcat #(keys (config/select config %))) selectors))
 
 (defn- expand-keyset
-  [graph transitive-fn keyset]
-  (set/union keyset (transitive-fn graph keyset)))
+  [{::keys [dag]} expand-fn keyset]
+  (set/union keyset (expand-fn dag keyset)))
 
 (defn- entries [m keys]
   (map #(find m %) keys))
 
 (defn- ordered-entries
-  [{::keys [config key-order] :as graph} selectors transitive-fn]
+  [{::keys [config key-order] :as graph} selectors expand-fn]
   (if (= (keys config) selectors)
     (entries config key-order)
     (->> (keep (->> (select-keyset config selectors)
-                    (expand-keyset graph transitive-fn))
+                    (expand-keyset graph expand-fn))
                key-order)
          (entries config))))
 
@@ -63,11 +64,11 @@
   ([graph]
    (entries (::config graph) (::key-order graph)))
   ([graph selectors]
-   (ordered-entries graph selectors dep/transitive-dependencies-set)))
+   (ordered-entries graph selectors dag/expand-out)))
 
 (defn reverse-dependency-order
   "Returns config entries providing `selectors` in reverse dependency order."
   ([graph]
    (reverse (dependency-order graph)))
   ([graph selectors]
-   (reverse (ordered-entries graph selectors dep/transitive-dependents-set))))
+   (reverse (ordered-entries graph selectors dag/expand-in))))

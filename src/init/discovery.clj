@@ -107,7 +107,7 @@
 
 (defn- scan-jar [url]
   (let [[jar entry] (split-jar-url url)]
-    (with-open [fs (jar-file-system jar)]
+    (with-open [^FileSystem fs (jar-file-system jar)]
       (scan-dir (.getPath fs entry (into-array String nil))))))
 
 (defn- scan-url [^URL url]

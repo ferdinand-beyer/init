@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Breaking**: Remove dependency to `com.stuartsierra/dependency`
+
 ## [0.2.90] (2022-10-27)
 
 - Reimplemented classpath scanning without `clojure.tools.namespace`.  

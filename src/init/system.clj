@@ -5,7 +5,7 @@
 
 ;; TODO: Add hooks to report starting/stopping components, e.g. for logging
 
-(defn- stop-component [component value exception]
+(defn- stop-component [component value ^Throwable exception]
   (try
     (component/stop component value)
     exception

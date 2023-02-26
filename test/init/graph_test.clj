@@ -1,6 +1,6 @@
 (ns init.graph-test
   (:require [clojure.test :refer [deftest is testing]]
-            [com.stuartsierra.dependency :as dep]
+            [init.dag :as dag]
             [init.errors :as errors]
             [init.graph :as graph]
             [init.test-support.helpers :refer [ex-info? thrown]]
@@ -34,9 +34,10 @@
 
   (testing "builds correct graph"
     (let [config (tc/settlers)
-          graph  (graph/dependency-graph config)]
-      (is (true? (dep/depends? graph ::tc/blacksmith ::tc/well)))
-      (is (false? (dep/depends? graph ::tc/lumberjack ::tc/farm))))))
+          graph  (graph/dependency-graph config)
+          dag    (::graph/dag graph)]
+      (is (true?  (dag/reachable? dag ::tc/blacksmith ::tc/well)))
+      (is (false? (dag/reachable? dag ::tc/lumberjack ::tc/farm))))))
 
 (defn ordered? [expected actual]
   (= expected (keep (set expected) actual)))
@@ -48,7 +49,7 @@
     (is (= (count config) (count (graph/dependency-order graph (keys config)))))
     (is (= [::tc/forester ::tc/lumberjack]
            (keys (graph/dependency-order graph [::tc/wood]))))
-    (is (= [::tc/farm ::tc/mill ::tc/well ::tc/bakery ::tc/iron-mine]
+    (is (= [::tc/farm ::tc/well ::tc/mill ::tc/bakery ::tc/iron-mine]
            (keys (graph/dependency-order graph [::tc/iron]))))
     (let [order (keys (graph/dependency-order graph))]
       (is (ordered? [::tc/farm ::tc/mill ::tc/bakery ::tc/iron-mine ::tc/blacksmith] order))

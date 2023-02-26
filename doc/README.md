@@ -167,11 +167,9 @@ dependency order, making sure all resources are released properly.
 
 ## Small footprint
 
-Init is a fairly small library and has very few dependencies.  At the moment,
-it only requires [`com.stuartsierra/dependency`][dependency-lib].
+Init is a fairly small library and has no required dependencies.
 
-Other dependency are optional and users will need to provide them when they
-want to use their functionality:
+Optional dependencies:
 
 * [`com.fbeyer/autoload`][autoload] for service-loader style discovery
 
@@ -188,4 +186,3 @@ Init is [modular in design](design.md):
   for Integrant.
 
 [autoload]: https://github.com/ferdinand-beyer/autoload
-[dependency-lib]: https://github.com/stuartsierra/dependency
