@@ -92,13 +92,13 @@ Releases are available from [Clojars][clojars].
 deps.edn:
 
 ```
-com.fbeyer/init {:mvn/version "0.2.90"}
+com.fbeyer/init {:mvn/version "0.2.94"}
 ```
 
 Leiningen/Boot:
 
 ```
-[com.fbeyer/init "0.2.90"]
+[com.fbeyer/init "0.2.94"]
 ```
 
 ## Documentation

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.94] (2023-08-06)
+
 ### Added
 
 - Classpath scanning now supports `include?` and `exclude?` filter predicates
@@ -55,7 +57,8 @@ Rework in `init.graph`:
 
 First public release
 
-[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.90...HEAD
+[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.94...HEAD
+[0.2.94]: https://github.com/ferdinand-beyer/init/compare/v0.2.90...v0.2.94
 [0.2.90]: https://github.com/ferdinand-beyer/init/compare/v0.2.86...v0.2.90
 [0.2.86]: https://github.com/ferdinand-beyer/init/compare/v0.2.83...v0.2.86
 [0.2.83]: https://github.com/ferdinand-beyer/init/compare/v0.1.77...v0.2.83
