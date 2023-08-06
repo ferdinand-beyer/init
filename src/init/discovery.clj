@@ -106,9 +106,9 @@
     (FileSystems/newFileSystem path cl)))
 
 (defn- scan-jar [url]
-  (let [[jar entry] (split-jar-url url)]
-    (with-open [fs (jar-file-system jar)]
-      (scan-dir (.getPath fs entry (into-array String nil))))))
+  (let [[jar-path entry] (split-jar-url url)]
+    (with-open [fs (jar-file-system jar-path)]
+      (scan-dir (.getPath fs ^String entry (into-array String nil))))))
 
 (defn- scan-url [^URL url]
   (case (.getProtocol url)
@@ -119,57 +119,78 @@
   ([^ClassLoader cl]
    (->> (.getResources cl "")
         enumeration-seq
-        (mapcat scan-url)
-        (map symbol)))
+        (mapcat scan-url)))
   ([^ClassLoader cl prefix]
    (->> (str/replace (namespace-munge prefix) \. \/)
         (.getResources cl)
         enumeration-seq
         (mapcat scan-url)
-        (map #(symbol (str prefix "." %))))))
+        (map #(str prefix "." %)))))
 
 (defn- context-classloader []
   (.. Thread currentThread getContextClassLoader))
 
 (defn classpath-namespaces
-  "Returns a set of symbols of all namespaces on the classpath.  When
-   `prefixes` are given, only returns namespaces starting with one of the
-   prefixes."
-  ([]
-   (into #{} (scan-classpath (context-classloader))))
-  ([prefixes]
-   (let [cl (context-classloader)]
-     (into #{} (mapcat (partial scan-classpath cl)) prefixes))))
+  "Returns a set of symbols of all namespaces on the classpath starting
+   with one of the given `prefixes`.
+
+   The optional `include?` and `exclude?` predicates can be used to filter
+   found results, for example:
+
+   ```clojure
+   (classpath-namespaces ['my.project] :exclude? #(str/ends-with % \"-test\"))
+   ```"
+  [prefixes & {:keys [include? exclude?]}]
+  (let [cl    (context-classloader)
+        xform (-> (mapcat (partial scan-classpath cl))
+                  (cond->
+                   (some? exclude?) (comp (remove exclude?))
+                   (some? include?) (comp (filter include?)))
+                  (comp (map symbol)))]
+    (into #{} xform prefixes)))
+
+(defn require-namespaces
+  "Requires all namespaces with `ns-names`, and returns a sequence of
+   namespace objects."
+  [ns-names]
+  (run! require ns-names)
+  (map the-ns ns-names))
 
 (defn load-namespaces
-  "Loads and returns all namespaces matching `prefixes` on the classpath."
-  [prefixes]
-  (let [ns-names (classpath-namespaces prefixes)]
-    (run! require ns-names)
-    (map the-ns ns-names)))
+  "Loads and returns all namespaces matching `prefixes` on the classpath.
+
+   Takes the same options as [[classpath-namespaces]]."
+  {:arglists '([prefixes & {:keys [include? exclude?]}])}
+  [prefixes & {:as opts}]
+  (require-namespaces (classpath-namespaces prefixes opts)))
 
 (defn scan
   "Scans the classpath for namespaces starting with `prefixes`, and returns
-   a config with all components found in those."
-  ([prefixes]
-   (from-namespaces (load-namespaces prefixes)))
-  ([config prefixes]
-   (from-namespaces config (load-namespaces prefixes))))
+   a config with all components found in those.
 
-(defn- emit-static-scan [prefixes]
-  (let [namespaces (classpath-namespaces prefixes)]
+   Takes the same options as [[classpath-namespaces]]."
+  {:arglists '([prefixes & {:keys [config include? exclude?]}]
+               [config prefixes & {:keys [include? exclude?]}])}
+  [prefixes & {:keys [config] :or {config {}} :as opts}]
+  (from-namespaces config (load-namespaces prefixes opts)))
+
+(defn- emit-static-scan [prefixes opts]
+  (let [namespaces (classpath-namespaces prefixes opts)]
     `(do
        (require ~@(map (partial list 'quote) namespaces))
-       (discovery/from-namespaces
+       (from-namespaces
         ~(mapv (fn [n] `(the-ns (quote ~n))) namespaces)))))
 
 (defmacro static-scan
   "Like [[scan]], but scans the classpath at macro expansion time.
 
    Expands to code that uses `require` to load required namespaces, and a
-   config map created with [[from-namespaces]]."
-  [prefixes]
-  (emit-static-scan (eval prefixes)))
+   config map created with [[from-namespaces]].
+
+   Takes the same options as [[classpath-namespaces]]."
+  {:arglists '([prefixes & {:keys [include? exclude?]}])}
+  [prefixes & {:as opts}]
+  (emit-static-scan (eval prefixes) opts))
 
 ;;;; SERVICE REGISTRY
 
@@ -184,7 +205,7 @@
   ([]
    (services "init.namespaces"))
   ([name]
-   (let [services   (requiring-resolve 'com.fbeyer.autoload/services)
-         namespaces (set (services name))]
+   (let [services*  (requiring-resolve 'com.fbeyer.autoload/services)
+         namespaces (set (services* name))]
      (run! require namespaces)
      (from-namespaces namespaces))))

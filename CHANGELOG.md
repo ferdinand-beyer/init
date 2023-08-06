@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Added
+
+- Classpath scanning now supports `include?` and `exclude?` filter predicates
+  ([#10](https://github.com/ferdinand-beyer/init/issues/10))
+- Added `init.discovery/require-namespaces`
+
+### Fixed
+
+- Fixed a few Reflection warnings
+- `static-scan` no longer requires `init.discovery` to be aliased as `discovery`
+
+### Removed
+
+- **Breaking**: Removed 0-arity of `init.discovery/classpath-namespaces`
+- **Breaking**: Removed 2-arity of `init.discovery/scan`
+
 ## [0.2.90] (2022-10-27)
 
 - Reimplemented classpath scanning without `clojure.tools.namespace`.  

@@ -12,7 +12,7 @@
     (catch Exception e
       (let [wrapped (errors/stop-failed-exception component value e)]
         (if exception
-          (doto exception (.addSuppressed wrapped))
+          (doto ^Throwable exception (.addSuppressed wrapped))
           wrapped)))))
 
 (defn- stop-system
