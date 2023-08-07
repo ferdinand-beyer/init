@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Options supplied to `static-scan` are not evaluated
+
 ## [0.2.94] (2023-08-06)
 
 ### Added

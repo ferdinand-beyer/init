@@ -176,10 +176,12 @@
 
 (defn- emit-static-scan [prefixes opts]
   (let [namespaces (classpath-namespaces prefixes opts)]
-    `(do
-       (require ~@(map (partial list 'quote) namespaces))
-       (from-namespaces
-        ~(mapv (fn [n] `(the-ns (quote ~n))) namespaces)))))
+    (if (seq namespaces)
+      `(do
+         (require ~@(map (partial list 'quote) namespaces))
+         (from-namespaces
+          ~(mapv (fn [n] `(the-ns (quote ~n))) namespaces)))
+      {})))
 
 (defmacro static-scan
   "Like [[scan]], but scans the classpath at macro expansion time.
@@ -190,7 +192,7 @@
    Takes the same options as [[classpath-namespaces]]."
   {:arglists '([prefixes & {:keys [include? exclude?]}])}
   [prefixes & {:as opts}]
-  (emit-static-scan (eval prefixes) opts))
+  (emit-static-scan (eval prefixes) (eval opts)))
 
 ;;;; SERVICE REGISTRY
 
