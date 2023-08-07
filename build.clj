@@ -41,7 +41,7 @@
 
 (defn tag [_]
   (let [tag (format "v%s.%s" base-version (b/git-count-revs nil))]
-    (git "tag" tag)
+    (git "tag" tag "-m" (str "Release " tag))
     (println "Tagged" tag)))
 
 (defn clean "Clean the target directory." [opts]

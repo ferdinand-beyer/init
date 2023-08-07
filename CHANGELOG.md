@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.96] (2023-08-07)
+
 ### Fixed
 
 - Options supplied to `static-scan` are not evaluated
@@ -61,7 +63,8 @@ Rework in `init.graph`:
 
 First public release
 
-[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.94...HEAD
+[Unreleased]: https://github.com/ferdinand-beyer/init/compare/v0.2.96...HEAD
+[0.2.96]: https://github.com/ferdinand-beyer/init/compare/v0.2.94...v0.2.96
 [0.2.94]: https://github.com/ferdinand-beyer/init/compare/v0.2.90...v0.2.94
 [0.2.90]: https://github.com/ferdinand-beyer/init/compare/v0.2.86...v0.2.90
 [0.2.86]: https://github.com/ferdinand-beyer/init/compare/v0.2.83...v0.2.86
