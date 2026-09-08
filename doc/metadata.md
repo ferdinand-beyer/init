@@ -178,9 +178,9 @@ application: `[:partial selector*]`.
 
 ```clojure
 (defn lookup
-  {:init/inject [:partial :app/db]
+  {:init/inject [:partial :app/db]}
   [db id]
-  (find-entity db id)})
+  (find-entity db id))
 ```
 
 At runtime, your `::lookup` component will take one argument, `id`, while
